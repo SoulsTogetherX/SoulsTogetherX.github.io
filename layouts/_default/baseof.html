@@ -1,0 +1,36 @@
+<head>
+  {{ partial "/metadata.html" }}
+</head>
+
+<body>
+  <div>
+    {{ with partial "envelopeWrapper.html" . }}
+      {{ block "main" . }}{{ end }}
+    {{ end }}
+  </div>
+
+  <nav>
+    <ul>
+      <li>
+        <a href="/about/">
+          <div class="nav-grid-item">About</div>
+        </a>
+      </li>
+      <li>
+        <a href="/links/">
+          <div class="nav-grid-item">Links</div>
+        </a>
+      </li>
+      <li>
+        <a href="/work/">
+          <div class="nav-grid-item">Work</div>
+        </a>
+      </li>
+      <li>
+        <a href="/contact/">
+          <div class="nav-grid-item">Contact</div>
+        </a>
+      </li>
+    </ul>
+  </nav>
+</body>
