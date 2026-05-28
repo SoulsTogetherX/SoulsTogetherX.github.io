@@ -94,15 +94,28 @@ function runNavigation(req) {
     return __awaiter(this, void 0, void 0, function* () {
         busy = true;
         const mySeq = ++navSeq;
-        const nextDoc = yield fetchDocument(req.url.href);
-        if (mySeq !== navSeq)
-            return;
-        forceMain(nextDoc);
-        document.title = nextDoc.title || document.title;
-        if (req.kind == 'push') {
-            history.pushState({}, '', req.url.href);
+        try {
+            const nextDoc = yield fetchDocument(req.url.href);
+            if (mySeq !== navSeq)
+                return;
+            forceMain(nextDoc);
+            document.title = nextDoc.title || document.title;
+            if (req.kind == 'push') {
+                history.pushState({}, '', req.url.href);
+            }
         }
-        busy = false;
+        catch (err) {
+            console.error(err);
+            window.location.href = req.url.href;
+        }
+        finally {
+            if (pendingNav) {
+                const next = pendingNav;
+                pendingNav = null;
+                runNavigation(next);
+            }
+            busy = false;
+        }
     });
 }
 //#endregion
