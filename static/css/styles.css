@@ -106,6 +106,7 @@ a {
 /*#endregion Envelope */
 
 /*#region Page */
+/*      Deactive */
 .page-wrapper {
   position: absolute;
   bottom: 0;
@@ -117,9 +118,10 @@ a {
 
   width: 100%;
   height: 100%;
+
+  opacity: 0;
 }
 
-/*      Deactive */
 .page {
   position: absolute;
   inset: 0;
@@ -133,6 +135,9 @@ a {
 }
 
 /*      Active */
+#envelope.active-envelope .page-wrapper {
+  opacity: 1;
+}
 #envelope.active-envelope .page {
   transform: translate(0%, -70%);
   transition-delay: 0.25s;

@@ -10,7 +10,7 @@
 /package.json
 
 ### Typescript ###
-/ts
+/static/js
 
 ### Hugo ###
 # Generated files by hugo
