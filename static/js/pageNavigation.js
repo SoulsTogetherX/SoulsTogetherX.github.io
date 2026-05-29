@@ -7,6 +7,8 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
+//#region Imports
+import { toggleEnvelope, isEnvelopeClosed } from './envelopeHandler.js';
 //#endregion
 //#region Constants
 const PAGE_ENTERING_CLASS_NAME = 'page-is-entering';
@@ -51,7 +53,6 @@ function fetchDocument(url) {
 }
 function buildIncomingMain(nextDoc) {
     const next = nextDoc.querySelector('main');
-    console.log(nextDoc);
     if (!next) {
         throw new Error('Missing main in fetched page');
     }
@@ -62,6 +63,25 @@ function buildIncomingMain(nextDoc) {
         incoming.className = next.className;
     }
     return incoming;
+}
+function transitionMain(nextDoc) {
+    return __awaiter(this, void 0, void 0, function* () {
+        if (!currentMain) {
+            throw new Error('Missing current main');
+        }
+        const parent = currentMain.parentElement;
+        if (!parent) {
+            throw new Error('Missing main parent element');
+        }
+        const incoming = buildIncomingMain(nextDoc);
+        parent.insertBefore(incoming, currentMain);
+        incoming.classList.add(PAGE_ENTERING_CLASS_NAME);
+        currentMain.classList.add(PAGE_EXITING_CLASS_NAME);
+        yield waitForAnimation(incoming);
+        incoming.classList.remove(PAGE_ENTERING_CLASS_NAME);
+        currentMain.remove();
+        currentMain = incoming;
+    });
 }
 function forceMain(nextDoc) {
     if (!currentMain) {
@@ -98,7 +118,17 @@ function runNavigation(req) {
             const nextDoc = yield fetchDocument(req.url.href);
             if (mySeq !== navSeq)
                 return;
-            forceMain(nextDoc);
+            if (req.url.href === location.href) {
+                return;
+            }
+            if (req.force) {
+                forceMain(nextDoc);
+            }
+            else {
+                yield transitionMain(nextDoc);
+                if (mySeq !== navSeq)
+                    return;
+            }
             document.title = nextDoc.title || document.title;
             if (req.kind == 'push') {
                 history.pushState({}, '', req.url.href);
@@ -131,11 +161,13 @@ document.addEventListener('click', (event) => {
     event.preventDefault();
     const url = new URL(anchor.href);
     if (url.href === location.href) {
+        toggleEnvelope(true);
         return;
     }
-    queueNavigation(url, 'push', false);
+    queueNavigation(url, 'push', isEnvelopeClosed());
+    toggleEnvelope(true);
 }, true);
 window.addEventListener('popstate', () => {
-    queueNavigation(new URL(location.href), 'pop', false);
+    queueNavigation(new URL(location.href), 'pop', isEnvelopeClosed());
 });
 //#endregion

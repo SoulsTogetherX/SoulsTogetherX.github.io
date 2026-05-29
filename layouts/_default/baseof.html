@@ -1,36 +1,17 @@
 <head>
-  {{ partial "/metadata.html" }}
+  {{ partial "/metadata.html" . }}
 </head>
 
 <body>
-  <div>
-    {{ with partial "envelopeWrapper.html" . }}
-      {{ block "main" . }}{{ end }}
-    {{ end }}
+  <div id="envelope-bg"></div>
+  <div id="envelope">
+    <div class="page-wrapper">
+      <main class="page">
+        {{ block "main" . }}
+        {{ end }}
+      </main>
+    </div>
+    {{ partial "/envelope/envelopeSvgs" }}
+    {{ partial "/envelope/envelopeNav" }}
   </div>
-
-  <nav>
-    <ul>
-      <li>
-        <a href="/about/">
-          <div>About</div>
-        </a>
-      </li>
-      <li>
-        <a href="/links/">
-          <div>Links</div>
-        </a>
-      </li>
-      <li>
-        <a href="/work/">
-          <div>Work</div>
-        </a>
-      </li>
-      <li>
-        <a href="/contact/">
-          <div>Contact</div>
-        </a>
-      </li>
-    </ul>
-  </nav>
 </body>
