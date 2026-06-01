@@ -28,6 +28,25 @@ a {
   cursor: pointer;
 }
 
+h1 {
+  font-size: 2.5rem;
+}
+h2 {
+  font-size: 1.7rem;
+}
+h3 {
+  font-size: 1.4rem;
+}
+h4 {
+  font-size: 1.1rem;
+}
+h5 {
+  font-size: 0.9rem;
+}
+h6 {
+  font-size: 0.7rem;
+}
+
 * {
   margin: 0;
   padding: 0;
@@ -75,6 +94,9 @@ a {
   inset: 0;
 
   z-index: -1;
+}
+#envelope .svgs-container {
+  pointer-events: none;
 }
 
 /*#region Envelope */
@@ -150,19 +172,25 @@ a {
 
 .page {
   position: absolute;
-  inset: 0;
+  top: 0;
   left: 2%;
   right: 2%;
+
+  transform: translate(0%, 0%);
+}
+.page-content {
+  position: relative;
+
+  min-height: 50vh;
 
   overflow-x: clip;
   overflow-y: scroll;
 
   padding: 0.5rem;
+  padding-bottom: 2rem;
 
   background-color: whitesmoke;
   border: solid black 2px;
-
-  transform: translate(0%, 0%);
 
   scrollbar-width: none;
   -ms-overflow-style: none;
@@ -176,7 +204,7 @@ a {
   opacity: 1;
 }
 #envelope.active-envelope .page {
-  transform: translate(0%, -70%);
+  transform: translate(0%, -20vh);
   transition-delay: 0.25s;
 }
 /*#endregion Page */
@@ -192,18 +220,18 @@ a {
 @keyframes page-enter-animation {
   0% {
     z-index: -1;
-    transform: rotate(0deg) translate(0%, -70%) rotate(0deg);
+    transform: rotate(0deg) translate(0%, -20vh) rotate(0deg);
   }
   49% {
     z-index: -1;
   }
   50% {
     z-index: 0;
-    transform: rotate(2deg) translate(0%, -170%) rotate(5deg);
+    transform: rotate(2deg) translate(0%, calc(-100% - 20vh)) rotate(5deg);
   }
   100% {
     z-index: 0;
-    transform: rotate(0deg) translate(0%, -70%) rotate(0deg);
+    transform: rotate(0deg) translate(0%, -20vh) rotate(0deg);
   }
 }
 @keyframes page-exit-animation {
@@ -316,16 +344,29 @@ a {
 }
 
 .bottom-page-margin {
-  margin-left: 22%;
+  margin-left: 24%;
   margin-right: 20%;
+  margin-bottom: 0.8rem;
 
   padding-left: 0.2rem;
+  padding-bottom: 0.4rem;
 
-  border-left: black solid 2px;
+  border-left: black solid 4px;
 }
 
 /* Home */
 /* OctoCat code here: https://github.com/tholman/github-corners/issues/15 */
+.github-corner svg {
+  position: absolute;
+  top: -1;
+  right: -1;
+
+  width: 15%;
+  aspect-ratio: 1;
+
+  fill: #000;
+  color: #fff;
+}
 .github-corner:hover .octo-arm {
   animation: octocat-wave 560ms ease-in-out;
 }
@@ -352,6 +393,14 @@ a {
   }
 }
 
+.page header.home-header {
+  margin-right: 15%;
+  margin-bottom: 3rem;
+}
+.home-intro {
+  text-align: center;
+}
+
 .home-links {
   display: flex;
   flex-direction: row;
@@ -364,6 +413,11 @@ a {
   gap: min(3rem, 10%);
 
   text-align: center;
+
+  a {
+    display: inline-block;
+    pointer-events: auto;
+  }
 
   a:first-child {
     margin-left: auto;

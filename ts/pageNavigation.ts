@@ -1,5 +1,9 @@
 //#region Imports
-import { toggleEnvelope, isEnvelopeClosed } from './envelopeHandler.js';
+import {
+  scrollToTop,
+  toggleEnvelope,
+  isEnvelopeClosed,
+} from './envelopeHandler.js';
 //#endregion
 
 //#region Type Definitions
@@ -18,6 +22,7 @@ const PAGE_EXITING_CLASS_NAME = 'page-is-exiting';
 //#endregion
 
 //#region Public Queries
+let inertMain: HTMLElement | null;
 let currentMain = document.querySelector('main') as HTMLElement | null;
 //#endregion
 
@@ -93,6 +98,9 @@ async function transitionMain(nextDoc: Document): Promise<void> {
     throw new Error('Missing main parent element');
   }
 
+  inertMain?.remove();
+  scrollToTop();
+
   const incoming = buildIncomingMain(nextDoc);
 
   parent.insertBefore(incoming, currentMain);
@@ -103,7 +111,10 @@ async function transitionMain(nextDoc: Document): Promise<void> {
   await waitForEvent(incoming, 'animationend');
 
   incoming.classList.remove(PAGE_ENTERING_CLASS_NAME);
-  currentMain.remove();
+
+  inertMain = currentMain;
+  inertMain.inert = true;
+  inertMain.setAttribute('aria-hidden', 'true');
   currentMain = incoming;
 }
 function forceMain(nextDoc: Document): void {
