@@ -8,6 +8,13 @@ const PAGE_SCROLLING_CLASSNAME = 'page-scrolling';
 const PAGE_SCROLL_TIMEOUt = 100;
 //#endregion
 
+//#region Constant Values (SLOWDOWN)
+const BOUNCE_FACTOR = 0.4;
+
+const SLOWDOWN_FACTOR = 0.9;
+const SLOWDOWN_FLAT = 0.5;
+//#endregion
+
 //#region Constant Queries
 const ENVELOPE_BG = document.getElementById('envelope-bg');
 const ENVELOPE = document.getElementById('envelope');
@@ -16,8 +23,10 @@ const ENVELOPE = document.getElementById('envelope');
 //#region Public Variables
 let currentPageOffsetY: number = 0;
 let lastPageY: number = 0;
+let lastDelta: number = 0;
 
 let pointerId: number | undefined = undefined;
+let slowdownId: number | undefined = undefined;
 //#endregion
 
 //#region Listeners
@@ -39,7 +48,6 @@ export function initializePagePosition(page: HTMLElement | null): void {
   const height = page.getBoundingClientRect().height;
   const startPos = height - window.innerHeight * 0.2;
   setPageOffsetDirect(page, startPos);
-  console.trace();
 }
 
 export function settupPointerListener(page: HTMLElement | null): void {
@@ -53,7 +61,7 @@ export function settupPointerListener(page: HTMLElement | null): void {
   window.addEventListener(
     'wheel',
     (event: WheelEvent) => {
-      if (isBusy()) {
+      if (isBusy() || page.inert) {
         return;
       }
 
@@ -81,14 +89,17 @@ export function settupPointerListener(page: HTMLElement | null): void {
     page.classList.add(PAGE_DRAGGING_CLASSNAME);
 
     lastPageY = event.pageY;
+    if (slowdownId) {
+      cancelAnimationFrame(slowdownId);
+    }
 
     page.addEventListener('pointermove', onPointerMove);
     page.addEventListener(
       'pointerup',
       () => {
-        page.removeEventListener('pointermove', onPointerMove);
-        page.classList.remove(PAGE_DRAGGING_CLASSNAME);
         pointerId = undefined;
+        page.removeEventListener('pointermove', onPointerMove);
+        slowdownAnimation(page, lastDelta);
       },
       { once: true }
     );
@@ -104,7 +115,9 @@ function onPointerMove(event: PointerEvent): void {
   }
 
   const page = event.currentTarget as HTMLElement;
-  setPageOffsetDirect(page, currentPageOffsetY + event.pageY - lastPageY);
+  lastDelta = event.pageY - lastPageY;
+
+  setPageOffsetDirect(page, currentPageOffsetY + lastDelta);
   lastPageY = event.pageY;
 }
 function setToDefaultOffet(page: HTMLElement): void {
@@ -123,6 +136,43 @@ function setPageOffsetDirect(page: HTMLElement, direct: number): void {
 
   currentPageOffsetY = Math.max(Math.min(direct, upperbound), 0);
   page.style.setProperty('--page-offset-y', `${currentPageOffsetY - height}px`);
+}
+
+function slowdownAnimation(page: HTMLElement, velocity: number): void {
+  // Exit Condition
+  if (Math.abs(velocity) < 0.1) {
+    slowdownAnimationFinish(page);
+    return;
+  }
+
+  // Slowdown
+  if (velocity > 0) {
+    velocity = Math.max(0, velocity - SLOWDOWN_FLAT) * SLOWDOWN_FACTOR;
+  } else if (velocity < 0) {
+    velocity = Math.min(0, velocity + SLOWDOWN_FLAT) * SLOWDOWN_FACTOR;
+  }
+
+  // Bounce
+  const upperbound: number = Math.max(
+    page.offsetHeight,
+    ENVELOPE?.offsetHeight ?? 0
+  );
+  const nextPos: number = currentPageOffsetY + velocity;
+  if (nextPos <= 0 || nextPos >= upperbound) {
+    velocity *= -BOUNCE_FACTOR;
+  }
+  console.log(currentPageOffsetY);
+
+  // Page Offset Setter
+  setPageOffsetDirect(page, currentPageOffsetY + velocity);
+
+  // Next Frame
+  slowdownId = requestAnimationFrame(() => {
+    slowdownAnimation(page, velocity);
+  });
+}
+function slowdownAnimationFinish(page: HTMLElement): void {
+  page.classList.remove(PAGE_DRAGGING_CLASSNAME);
 }
 //#endregion
 
