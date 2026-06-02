@@ -4,6 +4,8 @@ import { waitForEvent, getCurrentPage, isBusy } from './pageNavigation.js';
 const ACTIVE_ENVELOPE_CLASSNAME = 'active-envelope';
 
 const PAGE_DRAGGING_CLASSNAME = 'page-dragging';
+const PAGE_SCROLLING_CLASSNAME = 'page-scrolling';
+const PAGE_SCROLL_TIMEOUt = 100;
 //#endregion
 
 //#region Constant Queries
@@ -14,6 +16,8 @@ const ENVELOPE = document.getElementById('envelope');
 //#region Public Variables
 let currentPageOffsetY: number = 0;
 let lastPageY: number = 0;
+
+let pointerId: number | undefined = undefined;
 //#endregion
 
 //#region Listeners
@@ -35,6 +39,7 @@ export function initializePagePosition(page: HTMLElement | null): void {
   const height = page.getBoundingClientRect().height;
   const startPos = height - window.innerHeight * 0.2;
   setPageOffsetDirect(page, startPos);
+  console.trace();
 }
 
 export function settupPointerListener(page: HTMLElement | null): void {
@@ -42,31 +47,48 @@ export function settupPointerListener(page: HTMLElement | null): void {
     return;
   }
 
-  setPageOffsetDirect(
-    page,
-    page.getBoundingClientRect().height - window.innerHeight * 0.2
-  );
+  let wheelEventEndTimeout: number | undefined = undefined;
+  setToDefaultOffet(page);
 
-  page.addEventListener(
+  window.addEventListener(
     'wheel',
     (event: WheelEvent) => {
+      if (isBusy()) {
+        return;
+      }
+
+      page.classList.add(PAGE_SCROLLING_CLASSNAME);
       setPageOffsetDirect(page, currentPageOffsetY - event.deltaY * 0.5);
+
+      clearTimeout(wheelEventEndTimeout);
+      wheelEventEndTimeout = setTimeout(() => {
+        page.classList.remove(PAGE_SCROLLING_CLASSNAME);
+        wheelEventEndTimeout = undefined;
+      }, PAGE_SCROLL_TIMEOUt);
     },
     false
   );
 
   page.addEventListener('pointerdown', (event: PointerEvent) => {
+    if (pointerId === undefined) {
+      pointerId = event.pointerId;
+    }
+    if (isBusy() || pointerId !== event.pointerId) {
+      return;
+    }
+
     page.setPointerCapture(event.pointerId);
     page.classList.add(PAGE_DRAGGING_CLASSNAME);
 
     lastPageY = event.pageY;
 
-    page.addEventListener('pointermove', setPageOffset);
+    page.addEventListener('pointermove', onPointerMove);
     page.addEventListener(
       'pointerup',
       () => {
+        page.removeEventListener('pointermove', onPointerMove);
         page.classList.remove(PAGE_DRAGGING_CLASSNAME);
-        page.removeEventListener('pointermove', setPageOffset);
+        pointerId = undefined;
       },
       { once: true }
     );
@@ -76,10 +98,20 @@ export function settupPointerListener(page: HTMLElement | null): void {
 //#endregion
 
 //#region Pointer Helper Methods
-function setPageOffset(event: PointerEvent): void {
+function onPointerMove(event: PointerEvent): void {
+  if (isBusy() || pointerId !== event.pointerId) {
+    return;
+  }
+
   const page = event.currentTarget as HTMLElement;
   setPageOffsetDirect(page, currentPageOffsetY + event.pageY - lastPageY);
   lastPageY = event.pageY;
+}
+function setToDefaultOffet(page: HTMLElement): void {
+  setPageOffsetDirect(
+    page,
+    page.getBoundingClientRect().height - window.innerHeight * 0.2
+  );
 }
 
 function setPageOffsetDirect(page: HTMLElement, direct: number): void {
@@ -101,15 +133,17 @@ export function toggleEnvelope(toggle: boolean) {
   }
 
   if (toggle) {
-    ENVELOPE.classList.add(ACTIVE_ENVELOPE_CLASSNAME);
+    if (!ENVELOPE.classList.contains(ACTIVE_ENVELOPE_CLASSNAME)) {
+      waitForEvent(ENVELOPE, 'transitionend').then(() => {
+        const page = getCurrentPage();
+        if (page) {
+          initializePagePosition(page);
+          settupPointerListener(page);
+        }
+      });
 
-    waitForEvent(ENVELOPE, 'transitionend').then(() => {
-      const page = getCurrentPage();
-      if (page) {
-        initializePagePosition(page);
-        settupPointerListener(page);
-      }
-    });
+      ENVELOPE.classList.add(ACTIVE_ENVELOPE_CLASSNAME);
+    }
     return;
   }
 
@@ -124,5 +158,11 @@ export function isEnvelopeClosed(): boolean {
   return !ENVELOPE.classList.contains(ACTIVE_ENVELOPE_CLASSNAME);
 }
 
-export function scrollToTop(frames: number = 10): void {}
+export function scrollToTop(): void {
+  const page: HTMLElement | null = getCurrentPage();
+  if (!page) {
+    return;
+  }
+  setToDefaultOffet(page);
+}
 //#endregion

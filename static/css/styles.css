@@ -63,7 +63,14 @@ h6 {
 
 .page-dragging {
   transition: unset !important;
-  transition-delay: 0s !important;
+  transition-delay: unset !important;
+
+  -webkit-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+}
+.page-scrolling {
+  transition-delay: unset !important;
 
   -webkit-user-select: none;
   -ms-user-select: none;
