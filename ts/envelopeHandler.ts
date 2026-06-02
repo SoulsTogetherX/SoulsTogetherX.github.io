@@ -1,4 +1,4 @@
-import { getCurrentPage, isBusy } from './pageNavigation.js';
+import { waitForEvent, getCurrentPage, isBusy } from './pageNavigation.js';
 
 //#region Constant Values
 const ACTIVE_ENVELOPE_CLASSNAME = 'active-envelope';
@@ -12,7 +12,7 @@ const ENVELOPE = document.getElementById('envelope');
 //#endregion
 
 //#region Public Variables
-let currentPagePos: number = 0;
+let currentPageOffsetY: number = 0;
 let lastPageY: number = 0;
 //#endregion
 
@@ -50,7 +50,7 @@ export function settupPointerListener(page: HTMLElement | null): void {
   page.addEventListener(
     'wheel',
     (event: WheelEvent) => {
-      setPageOffsetDirect(page, currentPagePos - event.deltaY * 0.5);
+      setPageOffsetDirect(page, currentPageOffsetY - event.deltaY * 0.5);
     },
     false
   );
@@ -78,7 +78,7 @@ export function settupPointerListener(page: HTMLElement | null): void {
 //#region Pointer Helper Methods
 function setPageOffset(event: PointerEvent): void {
   const page = event.currentTarget as HTMLElement;
-  setPageOffsetDirect(page, currentPagePos + event.pageY - lastPageY);
+  setPageOffsetDirect(page, currentPageOffsetY + event.pageY - lastPageY);
   lastPageY = event.pageY;
 }
 
@@ -89,9 +89,8 @@ function setPageOffsetDirect(page: HTMLElement, direct: number): void {
     ENVELOPE?.offsetHeight ?? 0
   );
 
-  currentPagePos = Math.max(Math.min(direct, upperbound), 0);
-  console.log(currentPagePos);
-  page.style.setProperty('--page-offset-y', `${currentPagePos - height}px`);
+  currentPageOffsetY = Math.max(Math.min(direct, upperbound), 0);
+  page.style.setProperty('--page-offset-y', `${currentPageOffsetY - height}px`);
 }
 //#endregion
 
@@ -103,8 +102,17 @@ export function toggleEnvelope(toggle: boolean) {
 
   if (toggle) {
     ENVELOPE.classList.add(ACTIVE_ENVELOPE_CLASSNAME);
+
+    waitForEvent(ENVELOPE, 'transitionend').then(() => {
+      const page = getCurrentPage();
+      if (page) {
+        initializePagePosition(page);
+        settupPointerListener(page);
+      }
+    });
     return;
   }
+
   scrollToTop();
   ENVELOPE.classList.remove(ACTIVE_ENVELOPE_CLASSNAME);
 }

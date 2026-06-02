@@ -85,7 +85,7 @@ function isInternalLink(anchor: HTMLAnchorElement): boolean {
   return url.origin === location.origin;
 }
 
-function waitForEvent(
+export function waitForEvent(
   el: HTMLElement,
   type: keyof HTMLElementEventMap
 ): Promise<void> {
@@ -230,16 +230,11 @@ async function runNavigation(req: NavRequest): Promise<void> {
 //#endregion
 
 //#region Export Methods
-export function getCurrentPage(): HTMLElement | undefined {
-  return currentMain?.getElementsByTagName('section')[0];
+export function getCurrentPage(): HTMLElement | null {
+  return currentMain;
 }
 
 export function isBusy(): boolean {
   return busy;
 }
-//#endregion
-
-//#region Export Methods
-initializePagePosition(currentMain);
-settupPointerListener(currentMain);
 //#endregion
