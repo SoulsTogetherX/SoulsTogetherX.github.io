@@ -222,7 +222,11 @@ window.addEventListener('popstate', () => {
 });
 //#endregion
 
-//#region Check Methods
+//#region Export Methods
+export function getCurrentPage(): HTMLElement | undefined {
+  return currentMain?.getElementsByTagName('section')[0];
+}
+
 export function isBusy(): boolean {
   return busy;
 }
