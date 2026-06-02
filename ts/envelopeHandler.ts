@@ -8,11 +8,14 @@ const PAGE_SCROLLING_CLASSNAME = 'page-scrolling';
 const PAGE_SCROLL_TIMEOUt = 100;
 //#endregion
 
-//#region Constant Values (SLOWDOWN)
+//#region Constant Values (Pointer)
 const BOUNCE_FACTOR = 0.4;
+const MAX_BOUNCE_STRENGTH = 20;
 
 const SLOWDOWN_FACTOR = 0.9;
 const SLOWDOWN_FLAT = 0.5;
+
+const DRAG_THRESHOLD = 2;
 //#endregion
 
 //#region Constant Queries
@@ -27,6 +30,8 @@ let lastDelta: number = 0;
 
 let pointerId: number | undefined = undefined;
 let slowdownId: number | undefined = undefined;
+
+let dragging: boolean = false;
 //#endregion
 
 //#region Listeners
@@ -85,11 +90,11 @@ export function settupPointerListener(page: HTMLElement | null): void {
       return;
     }
 
-    page.setPointerCapture(event.pointerId);
     page.classList.add(PAGE_DRAGGING_CLASSNAME);
 
     lastPageY = event.pageY;
     if (slowdownId) {
+      lastDelta = 0;
       cancelAnimationFrame(slowdownId);
     }
 
@@ -116,6 +121,15 @@ function onPointerMove(event: PointerEvent): void {
 
   const page = event.currentTarget as HTMLElement;
   lastDelta = event.pageY - lastPageY;
+
+  if (!dragging) {
+    if (Math.abs(lastDelta) < DRAG_THRESHOLD) {
+      return;
+    }
+
+    page.setPointerCapture(event.pointerId);
+    dragging = true;
+  }
 
   setPageOffsetDirect(page, currentPageOffsetY + lastDelta);
   lastPageY = event.pageY;
@@ -160,8 +174,11 @@ function slowdownAnimation(page: HTMLElement, velocity: number): void {
   const nextPos: number = currentPageOffsetY + velocity;
   if (nextPos <= 0 || nextPos >= upperbound) {
     velocity *= -BOUNCE_FACTOR;
+
+    if (Math.abs(velocity) > MAX_BOUNCE_STRENGTH) {
+      velocity = MAX_BOUNCE_STRENGTH * Math.sign(velocity);
+    }
   }
-  console.log(currentPageOffsetY);
 
   // Page Offset Setter
   setPageOffsetDirect(page, currentPageOffsetY + velocity);
