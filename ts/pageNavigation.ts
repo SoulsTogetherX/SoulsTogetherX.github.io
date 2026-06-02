@@ -3,6 +3,8 @@ import {
   scrollToTop,
   toggleEnvelope,
   isEnvelopeClosed,
+  initializePagePosition,
+  settupPointerListener,
 } from './envelopeHandler.js';
 //#endregion
 
@@ -31,6 +33,40 @@ let busy = false;
 
 let pendingNav: NavRequest | null = null;
 let navSeq = 0;
+//#endregion
+
+//#region Event Listeners
+document.addEventListener(
+  'click',
+  (event) => {
+    const target = event.target as Element | null;
+    const anchor = target?.closest('a') as HTMLAnchorElement | null;
+
+    if (
+      !anchor ||
+      !isInternalLink(anchor) ||
+      isModifierClick(event as MouseEvent)
+    ) {
+      return;
+    }
+
+    event.preventDefault();
+
+    const url = new URL(anchor.href);
+    if (url.href === location.href) {
+      toggleEnvelope(true);
+      return;
+    }
+
+    queueNavigation(url, 'push', isEnvelopeClosed());
+    toggleEnvelope(true);
+  },
+  true
+);
+
+window.addEventListener('popstate', () => {
+  queueNavigation(new URL(location.href), 'pop', isEnvelopeClosed());
+});
 //#endregion
 
 //#region Public Methods (Checker Helpers)
@@ -102,8 +138,8 @@ async function transitionMain(nextDoc: Document): Promise<void> {
   scrollToTop();
 
   const incoming = buildIncomingMain(nextDoc);
-
   parent.insertBefore(incoming, currentMain);
+  initializePagePosition(incoming);
 
   incoming.classList.add(PAGE_ENTERING_CLASS_NAME);
   currentMain.classList.add(PAGE_EXITING_CLASS_NAME);
@@ -116,6 +152,8 @@ async function transitionMain(nextDoc: Document): Promise<void> {
   inertMain.inert = true;
   inertMain.setAttribute('aria-hidden', 'true');
   currentMain = incoming;
+
+  settupPointerListener(currentMain);
 }
 function forceMain(nextDoc: Document): void {
   if (!currentMain) {
@@ -128,10 +166,13 @@ function forceMain(nextDoc: Document): void {
   }
 
   const incoming = buildIncomingMain(nextDoc);
-
   parent.insertBefore(incoming, currentMain.nextSibling);
+  initializePagePosition(incoming);
+
   currentMain.remove();
   currentMain = incoming;
+
+  settupPointerListener(currentMain);
 }
 //#endregion
 
@@ -188,40 +229,6 @@ async function runNavigation(req: NavRequest): Promise<void> {
 }
 //#endregion
 
-//#region Event Listeners
-document.addEventListener(
-  'click',
-  (event) => {
-    const target = event.target as Element | null;
-    const anchor = target?.closest('a') as HTMLAnchorElement | null;
-
-    if (
-      !anchor ||
-      !isInternalLink(anchor) ||
-      isModifierClick(event as MouseEvent)
-    ) {
-      return;
-    }
-
-    event.preventDefault();
-
-    const url = new URL(anchor.href);
-    if (url.href === location.href) {
-      toggleEnvelope(true);
-      return;
-    }
-
-    queueNavigation(url, 'push', isEnvelopeClosed());
-    toggleEnvelope(true);
-  },
-  true
-);
-
-window.addEventListener('popstate', () => {
-  queueNavigation(new URL(location.href), 'pop', isEnvelopeClosed());
-});
-//#endregion
-
 //#region Export Methods
 export function getCurrentPage(): HTMLElement | undefined {
   return currentMain?.getElementsByTagName('section')[0];
@@ -230,4 +237,9 @@ export function getCurrentPage(): HTMLElement | undefined {
 export function isBusy(): boolean {
   return busy;
 }
+//#endregion
+
+//#region Export Methods
+initializePagePosition(currentMain);
+settupPointerListener(currentMain);
 //#endregion

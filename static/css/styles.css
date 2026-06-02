@@ -61,10 +61,13 @@ h6 {
   inset: 0;
 }
 
-.no-select {
-  touch-action: none;
-  user-select: none;
+.page-dragging {
+  transition: unset !important;
+  transition-delay: 0s !important;
+
   -webkit-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
 }
 
 .scrollGradient {
@@ -149,6 +152,10 @@ h6 {
   transform: translate(-50%, -10%);
   will-change: width, filter, transform;
 }
+#envelope.active-envelope * {
+  touch-action: none;
+}
+
 #envelope.active-envelope .envelope-top-flap {
   z-index: -1;
 
@@ -183,8 +190,6 @@ h6 {
   top: 0;
   left: 2%;
   right: 2%;
-
-  transform: translate(0%, 0%);
 }
 .page-content {
   position: relative;
@@ -213,7 +218,7 @@ h6 {
   opacity: 1;
 }
 #envelope.active-envelope .page {
-  transform: translate(0%, -20vh);
+  transform: translate(0, var(--page-offset-y));
   transition-delay: 0.25s;
 
   will-change: transform;
@@ -367,6 +372,13 @@ h6 {
 
 /* Home */
 /* OctoCat code here: https://github.com/tholman/github-corners/issues/15 */
+#envelope .github-corner {
+  display: none;
+}
+#envelope.active-envelope .github-corner {
+  display: unset;
+}
+
 .github-corner svg {
   position: absolute;
   top: -1;
