@@ -3,7 +3,7 @@ import {
   scrollToTop,
   toggleEnvelope,
   isEnvelopeClosed,
-  initializePagePosition,
+  initializePage,
   settupPointerListener,
 } from './envelopeHandler.js';
 //#endregion
@@ -44,6 +44,7 @@ document.addEventListener(
 
     if (
       !anchor ||
+      !anchor.href ||
       !isInternalLink(anchor) ||
       isModifierClick(event as MouseEvent)
     ) {
@@ -139,7 +140,7 @@ async function transitionMain(nextDoc: Document): Promise<void> {
 
   const incoming = buildIncomingMain(nextDoc);
   parent.insertBefore(incoming, currentMain);
-  initializePagePosition(incoming);
+  initializePage(incoming);
 
   incoming.classList.add(PAGE_ENTERING_CLASS_NAME);
   currentMain.classList.add(PAGE_EXITING_CLASS_NAME);
@@ -167,7 +168,7 @@ function forceMain(nextDoc: Document): void {
 
   const incoming = buildIncomingMain(nextDoc);
   parent.insertBefore(incoming, currentMain.nextSibling);
-  initializePagePosition(incoming);
+  initializePage(incoming);
 
   currentMain.remove();
   currentMain = incoming;
@@ -237,8 +238,4 @@ export function getCurrentPage(): HTMLElement | null {
 export function isBusy(): boolean {
   return busy;
 }
-//#endregion
-
-//#region Initialize Pages
-
 //#endregion

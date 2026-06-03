@@ -1,4 +1,5 @@
 import { waitForEvent, getCurrentPage, isBusy } from './pageNavigation.js';
+import { pageSettup } from './pageSettup.js';
 
 //#region Constant Values
 const ACTIVE_ENVELOPE_CLASSNAME = 'active-envelope';
@@ -6,6 +7,8 @@ const ACTIVE_ENVELOPE_CLASSNAME = 'active-envelope';
 const PAGE_DRAGGING_CLASSNAME = 'page-dragging';
 const PAGE_SCROLLING_CLASSNAME = 'page-scrolling';
 const PAGE_SCROLL_TIMEOUt = 100;
+
+const PAGE_STARTING_FACTOR = 0.3;
 //#endregion
 
 //#region Constant Values (Pointer)
@@ -45,13 +48,14 @@ ENVELOPE?.addEventListener('click', (_: Event) => {
 //#endregion
 
 //#region Page Movement Listeners
-export function initializePagePosition(page: HTMLElement | null): void {
+export function initializePage(page: HTMLElement | null): void {
   if (!page) {
     return;
   }
+  pageSettup(page);
 
   const height = page.getBoundingClientRect().height;
-  const startPos = height - window.innerHeight * 0.2;
+  const startPos = height - window.innerHeight * PAGE_STARTING_FACTOR;
   setPageOffsetDirect(page, startPos);
 }
 
@@ -93,10 +97,7 @@ export function settupPointerListener(page: HTMLElement | null): void {
     page.classList.add(PAGE_DRAGGING_CLASSNAME);
 
     lastPageY = event.pageY;
-    if (slowdownId) {
-      lastDelta = 0;
-      cancelAnimationFrame(slowdownId);
-    }
+    cancleSlowdown();
 
     page.addEventListener('pointermove', onPointerMove);
     page.addEventListener(
@@ -135,10 +136,20 @@ function onPointerMove(event: PointerEvent): void {
   lastPageY = event.pageY;
 }
 function setToDefaultOffet(page: HTMLElement): void {
+  cancleSlowdown();
+
   setPageOffsetDirect(
     page,
-    page.getBoundingClientRect().height - window.innerHeight * 0.2
+    page.getBoundingClientRect().height -
+      window.innerHeight * PAGE_STARTING_FACTOR
   );
+}
+function cancleSlowdown(): void {
+  if (slowdownId) {
+    lastDelta = 0;
+    cancelAnimationFrame(slowdownId);
+    slowdownId = undefined;
+  }
 }
 
 function setPageOffsetDirect(page: HTMLElement, direct: number): void {
@@ -204,7 +215,7 @@ export function toggleEnvelope(toggle: boolean) {
       waitForEvent(ENVELOPE, 'transitionend').then(() => {
         const page = getCurrentPage();
         if (page) {
-          initializePagePosition(page);
+          initializePage(page);
           settupPointerListener(page);
         }
       });
