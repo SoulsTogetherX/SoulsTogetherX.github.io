@@ -21,11 +21,13 @@ type NavRequest = {
 //#region Constant Values
 const PAGE_ENTERING_CLASS_NAME = 'page-is-entering';
 const PAGE_EXITING_CLASS_NAME = 'page-is-exiting';
+
+const FALLBACK_REDIRECTS = ['/', '/about'];
 //#endregion
 
 //#region Public Queries
 let inertMain: HTMLElement | null;
-let currentMain = document.querySelector('main') as HTMLElement | null;
+let currentMain: HTMLElement | null;
 //#endregion
 
 //#region Public Variables
@@ -170,7 +172,9 @@ function forceMain(nextDoc: Document): void {
   parent.insertBefore(incoming, currentMain.nextSibling);
   initializePage(incoming);
 
-  currentMain.remove();
+  inertMain = currentMain;
+  inertMain.inert = true;
+  inertMain.setAttribute('aria-hidden', 'true');
   currentMain = incoming;
 
   settupPointerListener(currentMain);
@@ -238,4 +242,39 @@ export function getCurrentPage(): HTMLElement | null {
 export function isBusy(): boolean {
   return busy;
 }
+//#endregion
+
+//#region Export Methods
+async function initalizePages(): Promise<void> {
+  currentMain = document.querySelector('main') as HTMLElement | null;
+
+  if (!currentMain) {
+    throw new Error('Missing current main');
+  }
+
+  const parent = currentMain.parentElement;
+  if (!parent) {
+    throw new Error('Missing parent element for main');
+  }
+
+  const nextDoc = await fetchDocument(
+    FALLBACK_REDIRECTS[
+      FALLBACK_REDIRECTS[0] !== window.location.pathname ? 0 : 1
+    ]
+  );
+
+  inertMain = buildIncomingMain(nextDoc);
+  parent.insertBefore(inertMain, currentMain);
+
+  // Temp fix due to cyclic file referencing
+  requestAnimationFrame(() => {
+    initializePage(currentMain);
+    initializePage(inertMain);
+  });
+
+  inertMain.inert = true;
+  inertMain.setAttribute('aria-hidden', 'true');
+}
+
+initalizePages();
 //#endregion
