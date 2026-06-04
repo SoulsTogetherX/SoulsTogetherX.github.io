@@ -71,20 +71,30 @@ h6 {
   inset: 0;
 }
 
-.page-dragging {
-  transition: unset !important;
-  transition-delay: unset !important;
-
+.no-select {
   -webkit-user-select: none;
   -ms-user-select: none;
   user-select: none;
 }
-.page-scrolling {
-  transition-delay: unset !important;
 
-  -webkit-user-select: none;
-  -ms-user-select: none;
+.movable-wrapper {
+  position: absolute;
+  isolation: isolate;
+
+  touch-action: none;
   user-select: none;
+  cursor: grab;
+
+  translate: var(--translate-offset-x) var(--translate-offset-y);
+  will-change: translate;
+}
+.moving-wrapper {
+  transition: translate 0s !important;
+}
+
+.movable-origin-offset {
+  transform: translate(var(--origin-offset-x), var(--origin-offset-y))
+    var(--extra-transform,);
 }
 /*#endregion*/
 
@@ -107,25 +117,20 @@ h6 {
 /*#region Envelope */
 /*      Deactive */
 #envelope {
+  position: absolute;
   display: flex;
 
-  position: absolute;
-  top: max(50%, calc(100% - 50vh));
-  left: 50%;
-
-  width: min(50%, 15rem, 150vh);
+  width: min(50vw, 15rem, 150vh);
   aspect-ratio: 2;
 
   border: solid black 2px;
   background-color: whitesmoke;
   filter: drop-shadow(1px 1px 2px hsl(0deg 0% 0% / 0.6));
-
-  transform: translate(-50%, -50%);
 }
 #envelope:hover {
   filter: drop-shadow(16px 16px 16px hsl(0deg 0% 0% / 0.25));
 
-  transform: translate(-50%, -50%) scale(1.1) rotate(3deg);
+  --extra-transform: scale(1.1) rotate(3deg);
   will-change: filter, transform;
 }
 #envelope .envelope-top-flap {
@@ -141,12 +146,17 @@ h6 {
 
 /*      Active */
 #envelope.active-envelope {
-  width: min(80%, 80vh);
+  width: min(80vw, 80vh);
 
   filter: drop-shadow(20px 20px 20px hsl(0deg 0% 0% / 0.15));
 
-  transform: translate(-50%, -10%);
+  --extra-transform: unset;
   will-change: width, filter, transform;
+
+  cursor: pointer;
+}
+.movable-wrapper:has(> #envelope.active-envelope) {
+  translate: 50vw 65vh;
 }
 #envelope.active-envelope * {
   touch-action: none;
@@ -186,6 +196,8 @@ h6 {
   top: 0;
   left: 2%;
   right: 2%;
+
+  translate: var(--translate-offset-x) 0;
 }
 .page-content {
   position: relative;
@@ -208,16 +220,16 @@ h6 {
 .page::-webkit-scrollbar {
   display: none;
 }
+.page.animation-delay {
+  transition-delay: 0.25s;
+}
 
 /*      Active */
 #envelope.active-envelope .page-wrapper {
   opacity: 1;
 }
 #envelope.active-envelope .page {
-  transform: translate(0, var(--page-offset-y));
-  transition-delay: 0.25s;
-
-  will-change: transform;
+  translate: var(--translate-offset-x) var(--translate-offset-y);
 }
 /*#endregion Page */
 
@@ -232,18 +244,18 @@ h6 {
 @keyframes page-enter-animation {
   0% {
     z-index: -1;
-    transform: rotate(0deg) translate(0%, -30vh) rotate(0deg);
+    transform: rotate(0deg) translate(0%, 0%) rotate(0deg);
   }
   49% {
     z-index: -1;
   }
   50% {
     z-index: 0;
-    transform: rotate(2deg) translate(0%, calc(-100% - 30vh)) rotate(5deg);
+    transform: rotate(2deg) translate(0%, -100%) rotate(5deg);
   }
   100% {
     z-index: 0;
-    transform: rotate(0deg) translate(0%, -30vh) rotate(0deg);
+    transform: rotate(0deg) translate(0%, 0%) rotate(0deg);
   }
 }
 @keyframes page-exit-animation {

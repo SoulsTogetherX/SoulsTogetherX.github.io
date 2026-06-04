@@ -7,5 +7,6 @@
     "module": "es2020",
     "rootDir": "ts",
     "outDir": "static/js"
-  }
+  },
+  "exclude": ["node_modules", "public", "static", "ts/old"]
 }
