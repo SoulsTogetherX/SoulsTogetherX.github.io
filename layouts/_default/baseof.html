@@ -3,9 +3,9 @@
 </head>
 
 <body>
-  <div id="envelope-bg" aria-hidden="true"></div>
+  <div id="bg" aria-hidden="true"></div>
   <div id="envelope-wrapper" class="movable-wrapper">
-    <div id="envelope" class="movable-origin-offset">
+    <div id="envelope" class="movable-origin-offset grab-hover">
       <div class="page-wrapper">
         <main class="page movable-wrapper">
           {{ block "main" . }}
@@ -16,4 +16,8 @@
       {{ partial "/envelope/envelopeNav" }}
     </div>
   </div>
+
+  {{ partial "./objs/pencil" }}
+
+  <div id="transition-cover"></div>
 </body>

@@ -1,35 +1,19 @@
+import {
+  MOVEMENT_AXES,
+  createMovableElement,
+  registerMovableElement,
+  moveObjTo,
+  shiftByPixel,
+  makedUntouched,
+} from './moveableHandler.js';
+
 //#region Type Defs
-enum MOVEMENT_AXES {
-  STATIONARY = 0b00,
-  HORIZONTAL = 0b01,
-  VERTICAL = 0b10,
-  BOTH = 0b11,
-}
-
-type Vector2 = [number, number]; // [x, y];
-type Rect2 = [number, number, number, number]; // [x, y, width, height];
-
 type NavKind = 'push' | 'pop';
 
 type NavRequest = {
   url: URL;
   kind: NavKind;
   force: boolean;
-};
-
-type MoveableObject = {
-  root: HTMLElement;
-  visual: HTMLElement;
-
-  axes: MOVEMENT_AXES;
-
-  collision: Rect2;
-  limits?: Rect2;
-
-  origin: Vector2;
-  pos: Vector2;
-
-  slowdownId?: number;
 };
 //#endregion
 
@@ -39,48 +23,24 @@ const ACTIVE_ENVELOPE_CLASSNAME = 'active-envelope';
 const PAGE_ENTERING_CLASS_NAME = 'page-is-entering';
 const PAGE_EXITING_CLASS_NAME = 'page-is-exiting';
 
-const MOVING_WRAPPER_CLASS_NAME = 'moving-wrapper';
 const DISABLE_MOVE_WRAPPER_CLASS_NAME = 'disable-move-wrapper';
-//#endregion
-
-//#region Constant Property Names
-const TRANSLATE_OFFSET_X = '--translate-offset-x';
-const TRANSLATE_OFFSET_Y = '--translate-offset-y';
-
-const ORIGIN_OFFSET_X = '--origin-offset-x';
-const ORIGIN_OFFSET_Y = '--origin-offset-y';
-//#endregion
-
-//#region Constant Values (Constants)
-const BOUNCE_FACTOR = 0.1;
-
-const SLOWDOWN_FACTOR = 0.9;
-const SLOWDOWN_FLAT = 0.05;
-const SLOWDOWN_THRESHOLD = 0.01;
-
-const PAGE_STARTING_FACTOR = 0.3;
-const PAGE_SCROLL_TIMEOUt = 100;
-
-const DRAG_THRESHOLD = 2;
 //#endregion
 
 //#region Constant Values (Helper)
 const FALLBACK_REDIRECTS = ['/', '/about'];
-
-const movableObjects: Record<string, MoveableObject> = {};
 //#endregion
 
 //#region Constant Queries
-const ENVELOPE_BG = document.getElementById('envelope-bg');
-const ENVELOPE_WAPPER = document.getElementById('envelope-wrapper');
+const BG = document.getElementById('bg');
+
+const ENVELOPE_WRAPPER = document.getElementById('envelope-wrapper');
 const ENVELOPE = document.getElementById('envelope');
+
+const PENCIL_WRAPPER = document.getElementById('pencil-wrapper');
 //#endregion
 
 //#region Public Variables
-let pointerId: number | undefined = undefined;
-
 let busy: boolean = false;
-let isDragging: boolean = false;
 
 let pendingNav: NavRequest | undefined = undefined;
 let navSeq: number = 0;
@@ -127,293 +87,14 @@ function waitForEvent(
 //#region Listeners
 // Navigation
 document.addEventListener('click', onLinkClickCheck, true);
-window.addEventListener('popstate', () => {
+document.addEventListener('popstate', () => {
   queueNavigation(new URL(location.href), 'pop', isEnvelopeClosed());
 });
 
-// Resize
-document.addEventListener('resize', renderAllMovableElements);
-
 // Envelope
-ENVELOPE_BG?.addEventListener('click', (_) => {
+BG?.addEventListener('click', (_) => {
   toggleEnvelope(false);
 });
-//#endregion
-
-//#region Movable Rendering and Registering
-function registerAllMovableElements(): void {
-  if (ENVELOPE_WAPPER) {
-    registerMovableElement(
-      ENVELOPE_WAPPER,
-      ENVELOPE_WAPPER.firstElementChild as HTMLElement,
-      MOVEMENT_AXES.BOTH,
-      [50, 50],
-      [0.5, 0.5],
-      undefined,
-      () => toggleEnvelope(true)
-    );
-  }
-  renderAllMovableElements();
-}
-
-function renderAllMovableElements(): void {
-  for (const obj of Object.values(movableObjects)) {
-    renderMovableElement(obj);
-  }
-}
-
-function createMovableElement(
-  root: HTMLElement,
-  visual: HTMLElement,
-  axes: MOVEMENT_AXES,
-  pos: Vector2,
-  origin: Vector2,
-  limits: Rect2 | undefined
-): MoveableObject {
-  const obj: MoveableObject = {
-    root,
-    visual,
-    limits,
-    collision: [0, 0, 0, 0],
-    axes,
-    pos,
-    origin,
-  };
-
-  renderMovableElement(obj);
-
-  return obj;
-}
-function registerMovableElement(
-  root: HTMLElement,
-  visual: HTMLElement,
-  axes: MOVEMENT_AXES,
-  pos: Vector2,
-  origin: Vector2,
-  limits: Rect2 | undefined,
-  onClick: (() => void) | undefined = undefined
-): () => void {
-  const obj: MoveableObject = createMovableElement(
-    root,
-    visual,
-    axes,
-    pos,
-    origin,
-    limits
-  );
-
-  const unregister = makeDraggable(obj, onClick);
-
-  visual.addEventListener('resize', () => defineMovableElementCollision(obj));
-
-  defineMovableElementOrigin(obj);
-  defineMovableElementCollision(obj);
-
-  movableObjects[root.id] = obj;
-  return () => {
-    visual.removeEventListener('resize', () =>
-      defineMovableElementCollision(obj)
-    );
-    unregister();
-
-    delete movableObjects[root.id];
-  };
-}
-
-function defineMovableElementCollision(obj: MoveableObject): void {
-  const visual = obj.visual;
-
-  const posX = (visual.clientLeft / window.innerWidth) * 100;
-  const posY = (visual.clientTop / window.innerHeight) * 100;
-  const width = (visual.clientWidth / window.innerWidth) * 100;
-  const height = (visual.clientHeight / window.innerHeight) * 100;
-
-  obj.collision = [posX, posY, width, height];
-}
-function defineMovableElementOrigin(obj: MoveableObject): void {
-  const style = obj.visual.style;
-  style.setProperty(ORIGIN_OFFSET_X, `-${obj.origin[0] * 100}%`);
-  style.setProperty(ORIGIN_OFFSET_Y, `-${obj.origin[1] * 100}%`);
-}
-function renderMovableElement(obj: MoveableObject): void {
-  const style = obj.root.style;
-  style.setProperty(TRANSLATE_OFFSET_X, `${obj.pos[0]}vw`);
-  style.setProperty(TRANSLATE_OFFSET_Y, `${obj.pos[1]}vh`);
-}
-
-function moveMovableElement(
-  obj: MoveableObject,
-  deltaX: number,
-  deltaY: number
-): void {
-  if (obj.axes & MOVEMENT_AXES.HORIZONTAL) {
-    obj.pos[0] += (deltaX / window.innerWidth) * 100;
-  }
-  if (obj.axes & MOVEMENT_AXES.VERTICAL) {
-    obj.pos[1] += (deltaY / window.innerHeight) * 100;
-  }
-}
-
-// [Left, Top, Right, Bottom]
-function getClampLimits(obj: MoveableObject): Rect2 {
-  if (obj.limits === undefined) {
-    const origin = obj.origin;
-    const width = obj.collision[2];
-    const height = obj.collision[3];
-
-    return [
-      width * origin[0],
-      height * origin[1],
-      100 - width * (1.0 - origin[0]),
-      100 - height * (1.0 - origin[1]),
-    ];
-  }
-
-  const limits = obj.limits;
-  const width = obj.collision[2];
-  const height = obj.collision[3];
-
-  return [
-    width * limits[0],
-    height * limits[1],
-    width * limits[2],
-    height * limits[3],
-  ];
-}
-function clampMovableElement(obj: MoveableObject, limits: Rect2): void {
-  obj.pos[0] = Math.max(limits[0], Math.min(obj.pos[0], limits[2]));
-  obj.pos[1] = Math.max(limits[1], Math.min(obj.pos[1], limits[3]));
-}
-//#endregion
-
-//#region Movable Logic
-function makeDraggable(
-  obj: MoveableObject,
-  onClick: (() => void) | undefined = undefined
-): () => void {
-  const pos = obj.root;
-  const visual = obj.visual;
-
-  let prevX = 0,
-    prevY = 0;
-  let lastDeltaX = 0,
-    lastDeltaY = 0;
-
-  function onPointerDown(e: PointerEvent) {
-    if (isDragging) {
-      return;
-    }
-    if (pos.classList.contains(DISABLE_MOVE_WRAPPER_CLASS_NAME)) {
-      return;
-    }
-
-    cancelSlowdown(obj);
-
-    prevX = e.pageX;
-    prevY = e.pageY;
-    lastDeltaX = 0;
-    lastDeltaY = 0;
-
-    window.addEventListener('pointermove', onPointerMove);
-    window.addEventListener('pointerup', onPointerUp);
-    window.addEventListener('pointercancle', onCancle);
-    document.body.addEventListener('pointerleave', onCancle);
-  }
-  function onPointerMove(e: PointerEvent) {
-    lastDeltaX = e.pageX - prevX;
-    lastDeltaY = e.pageY - prevY;
-    prevX = e.pageX;
-    prevY = e.pageY;
-
-    if (!isDragging) {
-      if (Math.abs(lastDeltaX) + Math.abs(lastDeltaY) < DRAG_THRESHOLD) {
-        return;
-      }
-      pos.classList.add(MOVING_WRAPPER_CLASS_NAME);
-      isDragging = true;
-    }
-
-    moveMovableElement(obj, lastDeltaX, lastDeltaY);
-    clampMovableElement(obj, getClampLimits(obj));
-    renderMovableElement(obj);
-  }
-  function onPointerUp() {
-    if (!isDragging && onClick) {
-      onClick();
-    }
-
-    onSlowdown(obj, getClampLimits(obj), lastDeltaX, lastDeltaY);
-    clearBehavior();
-  }
-
-  function onCancle() {
-    pos.classList.remove(MOVING_WRAPPER_CLASS_NAME);
-    clearBehavior();
-  }
-  function clearBehavior() {
-    isDragging = false;
-
-    window.removeEventListener('pointermove', onPointerMove);
-    window.removeEventListener('pointerup', onPointerUp);
-    window.removeEventListener('pointercancle', onCancle);
-    document.body.removeEventListener('pointerleave', onCancle);
-  }
-
-  visual.addEventListener('pointerdown', onPointerDown);
-
-  return () => {
-    visual.removeEventListener('pointerdown', onPointerDown);
-    clearBehavior();
-  };
-}
-//#endregion
-
-//#region Movable Slowdown Logic
-function onSlowdown(
-  obj: MoveableObject,
-  limits: Rect2,
-  velcX: number,
-  velcY: number
-): void {
-  if (Math.abs(velcX) + Math.abs(velcY) < SLOWDOWN_THRESHOLD) {
-    cancelSlowdown(obj);
-    return;
-  }
-
-  if (velcX > 0) {
-    velcX = Math.max(0, velcX - SLOWDOWN_FLAT) * SLOWDOWN_FACTOR;
-  } else if (velcX < 0) {
-    velcX = Math.min(0, velcX + SLOWDOWN_FLAT) * SLOWDOWN_FACTOR;
-  }
-  if (velcY > 0) {
-    velcY = Math.max(0, velcY - SLOWDOWN_FLAT) * SLOWDOWN_FACTOR;
-  } else if (velcY < 0) {
-    velcY = Math.min(0, velcY + SLOWDOWN_FLAT) * SLOWDOWN_FACTOR;
-  }
-
-  moveMovableElement(obj, velcX, velcY);
-  clampMovableElement(obj, limits);
-  renderMovableElement(obj);
-
-  if (obj.pos[0] === limits[0] || obj.pos[0] === limits[2]) {
-    velcX *= -BOUNCE_FACTOR;
-  }
-  if (obj.pos[1] === limits[1] || obj.pos[1] === limits[3]) {
-    velcY *= -BOUNCE_FACTOR;
-  }
-
-  obj.slowdownId = requestAnimationFrame(() => {
-    onSlowdown(obj, limits, velcX, velcY);
-  });
-}
-function cancelSlowdown(obj: MoveableObject) {
-  if (obj.slowdownId) {
-    cancelAnimationFrame(obj.slowdownId);
-  }
-
-  obj.root.classList.remove(MOVING_WRAPPER_CLASS_NAME);
-  obj.slowdownId = undefined;
-}
 //#endregion
 
 //#region Document Methods
@@ -462,7 +143,7 @@ async function transitionMain(nextDoc: Document): Promise<void> {
   parent.insertBefore(incoming, currentMain);
 
   unregisterMovableElement();
-  unregisterMovableElement = initializePage(incoming);
+  unregisterMovableElement = initializeCurrentPage(incoming);
 
   incoming.classList.add(PAGE_ENTERING_CLASS_NAME);
   currentMain.classList.add(PAGE_EXITING_CLASS_NAME);
@@ -489,7 +170,7 @@ function forceMain(nextDoc: Document): void {
   parent.insertBefore(incoming, currentMain.nextSibling);
 
   unregisterMovableElement();
-  unregisterMovableElement = initializePage(incoming);
+  unregisterMovableElement = initializeCurrentPage(incoming);
 
   prevMain = currentMain;
   prevMain.setAttribute('aria-hidden', 'true');
@@ -548,7 +229,9 @@ async function runNavigation(req: NavRequest): Promise<void> {
       return;
     }
 
-    scrollPage(currentMain, 0);
+    if (currentMain) {
+      moveObjTo(currentMain, 0, -30);
+    }
 
     if (req.force) {
       forceMain(nextDoc);
@@ -577,38 +260,32 @@ async function runNavigation(req: NavRequest): Promise<void> {
 //#endregion
 
 //#region Envelope Methods
-function scrollPage(page: HTMLElement | undefined, posY: number): void {
-  if (!page) {
-    return;
-  }
-
-  const obj = movableObjects[page.id];
-  if (obj) {
-    obj.pos[1] = posY;
-    renderMovableElement(obj);
-  }
-}
-
 function toggleEnvelope(toggle: boolean): void {
-  if (!ENVELOPE || !ENVELOPE_WAPPER) {
+  if (!ENVELOPE || !ENVELOPE_WRAPPER) {
     return;
   }
+
+  makedUntouched(ENVELOPE_WRAPPER);
 
   if (toggle) {
     if (!ENVELOPE.classList.contains(ACTIVE_ENVELOPE_CLASSNAME)) {
-      scrollPage(currentMain, -30);
+      if (prevMain) {
+        moveObjTo(prevMain, 0, -30);
+      }
+      if (currentMain) {
+        moveObjTo(currentMain, 0, -30);
+      }
 
-      prevMain?.classList.add('animation-delay');
-      currentMain?.classList.add('animation-delay');
+      prevMain?.classList.add('ease-delay-page');
+      currentMain?.classList.add('ease-delay-page');
 
       waitForEvent(ENVELOPE, 'transitionend').then(() => {
-        prevMain?.classList.remove('animation-delay');
-        currentMain?.classList.remove('animation-delay');
+        prevMain?.classList.remove('ease-delay-page');
+        currentMain?.classList.remove('ease-delay-page');
       });
     }
 
-    ENVELOPE_WAPPER.classList.add(DISABLE_MOVE_WRAPPER_CLASS_NAME);
-    cancelSlowdown(movableObjects[ENVELOPE_WAPPER.id]);
+    ENVELOPE_WRAPPER.classList.add(DISABLE_MOVE_WRAPPER_CLASS_NAME);
 
     if (!ENVELOPE.classList.contains(ACTIVE_ENVELOPE_CLASSNAME)) {
       ENVELOPE.classList.add(ACTIVE_ENVELOPE_CLASSNAME);
@@ -616,7 +293,15 @@ function toggleEnvelope(toggle: boolean): void {
     return;
   }
 
-  ENVELOPE_WAPPER.classList.remove(DISABLE_MOVE_WRAPPER_CLASS_NAME);
+  prevMain?.classList.add('ease-page');
+  currentMain?.classList.add('ease-page');
+
+  waitForEvent(ENVELOPE, 'transitionend').then(() => {
+    prevMain?.classList.remove('ease-page');
+    currentMain?.classList.remove('ease-page');
+  });
+
+  ENVELOPE_WRAPPER.classList.remove(DISABLE_MOVE_WRAPPER_CLASS_NAME);
   ENVELOPE.classList.remove(ACTIVE_ENVELOPE_CLASSNAME);
 }
 function isEnvelopeClosed(): boolean {
@@ -629,6 +314,45 @@ function isEnvelopeClosed(): boolean {
 //#endregion
 
 //#region Initialization Methods (Defined)
+function registerAllMovableElements(): void {
+  if (ENVELOPE_WRAPPER) {
+    registerMovableElement(
+      ENVELOPE_WRAPPER,
+      ENVELOPE_WRAPPER.firstElementChild as HTMLElement,
+      MOVEMENT_AXES.HORIZONTAL | MOVEMENT_AXES.VERTICAL,
+      [50, 50],
+      [0.5, 0.5],
+      undefined,
+      () => toggleEnvelope(true)
+    );
+  }
+  if (PENCIL_WRAPPER) {
+    registerMovableElement(
+      PENCIL_WRAPPER,
+      PENCIL_WRAPPER.firstElementChild as HTMLElement,
+      MOVEMENT_AXES.HORIZONTAL | MOVEMENT_AXES.VERTICAL,
+      [50, 30],
+      [0.5, 0.5],
+      undefined
+    );
+  }
+}
+
+function initializeCurrentPage(
+  curr: HTMLElement,
+  movable: boolean = true
+): () => void {
+  const unregisterPage = initializePage(curr, movable);
+  const handleWheel = (e: WheelEvent) => {
+    shiftByPixel(curr, [0, e.deltaY * 0.5]);
+  };
+
+  document.addEventListener('wheel', handleWheel);
+  return () => {
+    document.removeEventListener('wheel', handleWheel);
+    unregisterPage();
+  };
+}
 function initializePage(
   page: HTMLElement,
   movable: boolean = true
@@ -676,10 +400,9 @@ async function initializePages(): Promise<void> {
   prevMain = buildIncomingMain(nextDoc);
   parent.insertBefore(prevMain, currentMain);
 
-  unregisterMovableElement = initializePage(currentMain);
+  unregisterMovableElement = initializeCurrentPage(currentMain);
   initializePage(prevMain, false);
 
   prevMain.setAttribute('aria-hidden', 'true');
 }
-
 //#endregion
