@@ -48,7 +48,7 @@ const ORIGIN_OFFSET_Y = '--origin-offset-y';
 const RESTITUTION = 0.4;
 
 const SLOWDOWN_FACTOR = 0.9;
-const SLOWDOWN_FLAT = 0.05;
+const SLOWDOWN_FLAT = 0.1;
 
 const DRAG_THRESHOLD = 2;
 //#endregion
@@ -64,12 +64,12 @@ let zIndex: number = 0;
 //#endregion
 
 //#region Converstion Methods
-function pxToVw(px: number): number {
-  return (px / window.innerWidth) * 100;
+function VwToPx(vw: number): number {
+  return (vw * window.innerWidth) / 100;
 }
 
-function pxToVh(px: number): number {
-  return (px / window.innerHeight) * 100;
+function VhToPx(vh: number): number {
+  return (vh * window.innerHeight) / 100;
 }
 //#endregion
 
@@ -85,7 +85,7 @@ export function createMovableElement(
   const obj: MoveableObject = {
     root,
     visual,
-    pos,
+    pos: [VwToPx(pos[0]), VhToPx(pos[1])],
     vel: [0, 0],
     origin,
     axes,
@@ -183,7 +183,7 @@ export function makeDraggable(
     }
 
     moveMovableElement(obj);
-    moveMovableElementManual(obj, [pxToVw(lastDeltaX), pxToVh(lastDeltaY)]);
+    moveMovableElementManual(obj, [lastDeltaX, lastDeltaY]);
     renderMovableElement(obj);
   }
   function onPointerUp() {
@@ -240,15 +240,15 @@ export function makedUntouched(el: HTMLElement): void {
 //#region Physics
 function renderMovableElement(obj: MoveableObject): void {
   const style = obj.root.style;
-  style.setProperty(TRANSLATE_OFFSET_X, `${obj.pos[0]}vw`);
-  style.setProperty(TRANSLATE_OFFSET_Y, `${obj.pos[1]}vh`);
+  style.setProperty(TRANSLATE_OFFSET_X, `${obj.pos[0]}px`);
+  style.setProperty(TRANSLATE_OFFSET_Y, `${obj.pos[1]}px`);
 }
 function moveMovableElement(obj: MoveableObject): void {
   if (obj.axes & MOVEMENT_AXES.HORIZONTAL) {
-    obj.pos[0] += pxToVw(obj.vel[0]);
+    obj.pos[0] += obj.vel[0];
   }
   if (obj.axes & MOVEMENT_AXES.VERTICAL) {
-    obj.pos[1] += pxToVh(obj.vel[1]);
+    obj.pos[1] += obj.vel[1];
   }
 }
 function moveMovableElementManual(obj: MoveableObject, delta: Vec2): void {
@@ -304,7 +304,7 @@ export function shiftByPixel(visual: HTMLElement, delta: Vec2): void {
     return;
   }
 
-  moveMovableElementManual(obj, [pxToVw(delta[0]), pxToVh(delta[1])]);
+  moveMovableElementManual(obj, [delta[0], delta[1]]);
   obj.vel = [0, 0];
 }
 //#endregion
@@ -312,16 +312,16 @@ export function shiftByPixel(visual: HTMLElement, delta: Vec2): void {
 //#region Collision
 function getWallLimits(obj: MoveableObject): Rect2 {
   const rect = obj.visual.getBoundingClientRect();
-  const width = pxToVw(rect.width);
-  const height = pxToVh(rect.height);
+  const width = rect.width;
+  const height = rect.height;
 
   if (obj.limits === undefined) {
     const origin = obj.origin;
     return [
       width * origin[0],
       height * origin[1],
-      100 - width * (1.0 - origin[0]),
-      100 - height * (1.0 - origin[1]),
+      window.innerWidth - width * (1.0 - origin[0]),
+      window.innerHeight - height * (1.0 - origin[1]),
     ];
   }
 
@@ -380,8 +380,8 @@ function resolveObjectCollision(a: MoveableObject, b: MoveableObject): void {
     const push = overlapX;
     const direction = centerAX < centerBX ? -1 : 1;
 
-    a.pos[0] += pxToVw((push / 2) * direction);
-    b.pos[0] += pxToVw((push / 2) * -direction);
+    a.pos[0] += (push / 2) * direction;
+    b.pos[0] += (push / 2) * -direction;
 
     const relativeVx = b.vel[0] - a.vel[0];
     if (relativeVx * direction < 0) {
@@ -393,8 +393,8 @@ function resolveObjectCollision(a: MoveableObject, b: MoveableObject): void {
     const push = overlapY;
     const direction = centerAY < centerBY ? -1 : 1;
 
-    a.pos[1] += pxToVh((push / 2) * direction);
-    b.pos[1] += pxToVh((push / 2) * -direction);
+    a.pos[1] += (push / 2) * direction;
+    b.pos[1] += (push / 2) * -direction;
 
     const relativeVy = b.vel[1] - a.vel[1];
     if (relativeVy * direction < 0) {
@@ -420,6 +420,8 @@ function updatePhysicsAll(): void {
     moveMovableElement(obj);
     resolveWallCollision(obj);
   }
+
+  resolveAllObjectCollisions();
 
   for (const obj of objects) {
     renderMovableElement(obj);

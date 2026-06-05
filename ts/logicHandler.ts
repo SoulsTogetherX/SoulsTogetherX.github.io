@@ -18,6 +18,8 @@ type NavRequest = {
 //#endregion
 
 //#region Constant ClassNames
+const DARKMODE_CLASSNAME = 'dark-mode';
+
 const ACTIVE_ENVELOPE_CLASSNAME = 'active-envelope';
 
 const PAGE_ENTERING_CLASS_NAME = 'page-is-entering';
@@ -37,6 +39,8 @@ const ENVELOPE_WRAPPER = document.getElementById('envelope-wrapper');
 const ENVELOPE = document.getElementById('envelope');
 
 const PENCIL_WRAPPER = document.getElementById('pencil-wrapper');
+
+const COLOR_TOKEN_WRAPPER = document.getElementById('color-token-wrapper');
 //#endregion
 
 //#region Public Variables
@@ -61,6 +65,12 @@ initializePages();
 //#endregion
 
 //#region Misc Methods
+function comparePaths(path1: string, path2: string): boolean {
+  const clean = (p: string) => p.replace(/[^a-zA-Z0-9/]|\/$/g, '');
+  console.log(path1, path2, clean(path1), clean(path2));
+  return clean(path1) === clean(path2);
+}
+
 function isModifierClick(event: MouseEvent): boolean {
   return (
     event.metaKey ||
@@ -195,7 +205,7 @@ function onLinkClickCheck(event: PointerEvent) {
   event.preventDefault();
 
   const url = new URL(anchor.href);
-  if (url.href === location.href) {
+  if (comparePaths(url.pathname, location.pathname)) {
     toggleEnvelope(true);
     return;
   }
@@ -225,8 +235,12 @@ async function runNavigation(req: NavRequest): Promise<void> {
     const nextDoc = await fetchDocument(req.url.href);
     if (mySeq !== navSeq) return;
 
-    if (req.url.href === location.href) {
+    if (comparePaths(req.url.pathname, location.pathname)) {
       return;
+    }
+
+    if (currentMain) {
+      settupPrevPageClick(currentMain, new URL(window.location.href));
     }
 
     if (currentMain) {
@@ -313,7 +327,28 @@ function isEnvelopeClosed(): boolean {
 }
 //#endregion
 
+//#region Color Token
+function toggleDarkMode(toggle?: boolean): void {
+  if (toggle === undefined) {
+    document.body.classList.toggle(DARKMODE_CLASSNAME);
+    return;
+  }
+
+  if (toggle) {
+    document.body.classList.add(DARKMODE_CLASSNAME);
+    return;
+  }
+  document.body.classList.remove(DARKMODE_CLASSNAME);
+}
+//#endregion
+
 //#region Initialization Methods (Defined)
+function settupPrevPageClick(page: HTMLElement, url: URL): void {
+  page.addEventListener('click', () => {
+    queueNavigation(url, 'push', false);
+  });
+}
+
 function registerAllMovableElements(): void {
   if (ENVELOPE_WRAPPER) {
     registerMovableElement(
@@ -331,9 +366,20 @@ function registerAllMovableElements(): void {
       PENCIL_WRAPPER,
       PENCIL_WRAPPER.firstElementChild as HTMLElement,
       MOVEMENT_AXES.HORIZONTAL | MOVEMENT_AXES.VERTICAL,
-      [50, 30],
+      [50, 70],
       [0.5, 0.5],
       undefined
+    );
+  }
+  if (COLOR_TOKEN_WRAPPER) {
+    registerMovableElement(
+      COLOR_TOKEN_WRAPPER,
+      COLOR_TOKEN_WRAPPER.firstElementChild as HTMLElement,
+      MOVEMENT_AXES.HORIZONTAL | MOVEMENT_AXES.VERTICAL,
+      [76, 50],
+      [0.5, 0.5],
+      undefined,
+      toggleDarkMode
     );
   }
 }
@@ -399,6 +445,7 @@ async function initializePages(): Promise<void> {
 
   prevMain = buildIncomingMain(nextDoc);
   parent.insertBefore(prevMain, currentMain);
+  settupPrevPageClick(prevMain, new URL(pathname, window.location.origin));
 
   unregisterMovableElement = initializeCurrentPage(currentMain);
   initializePage(prevMain, false);
