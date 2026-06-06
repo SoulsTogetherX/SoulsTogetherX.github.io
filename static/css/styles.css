@@ -1,3 +1,41 @@
+/*#region Color Scheme*/
+:root {
+  color-scheme: light dark;
+
+  --bg-color: light-dark(#f3f3f3, #1c1c1c);
+
+  --page-color: light-dark(#ededed, #373737);
+  --shadow-color: light-dark(#000, #949494);
+
+  --border-color: light-dark(#000, #fff);
+  --primary-text-color: light-dark(#000, #c2c2c2);
+  --secondary-text-color: light-dark(#282828, #c2c2c2);
+
+  --primary-color: light-dark(#ececec, #000);
+  --secondary-color: light-dark(#000, #212121);
+
+  --front-accent-color: light-dark(#f3a6ff, #0b7626);
+  --back-accent-color: light-dark(#79008c, #0acc00);
+
+  --link-normal-color: light-dark(#0173ca, #0173ca);
+  --link-visited-color: light-dark(#0158ca, #0158ca);
+  --link-active-color: light-dark(#01acca, #01acca);
+}
+:root[data-theme='light'] {
+  color-scheme: light;
+}
+:root[data-theme='dark'] {
+  color-scheme: dark;
+}
+
+body {
+  --bg-img: url('../assets/img/wooden-bg-light.webp');
+}
+:root[data-theme='dark'] body {
+  background-image: url('../assets/img/wooden-bg-dark.webp');
+}
+/*#endregion*/
+
 /*#region Tag Styles*/
 body {
   display: block;
@@ -7,9 +45,12 @@ body {
   width: 100%;
   height: 100dvh;
 
-  background-image: url('../assets/img/wooden-bg.png');
+  background-color: var(--bg-color);
+  background-image: var(--bg-img);
   background-repeat: no-repeat;
   background-size: cover;
+
+  color: var(--text-color);
 }
 
 footer {
@@ -80,6 +121,11 @@ h6 {
 /*#endregion*/
 
 /*#region Helper Global Styles*/
+.svg-color {
+  fill: var(--primary-color);
+  stroke: var(--border-color);
+}
+
 .abs-inset {
   position: absolute;
   inset: 0;
@@ -131,7 +177,8 @@ h6 {
 
   filter: blur(50px);
 
-  background-color: #fff;
+  background-color: var(--bg-color);
+  transition: linear 0s;
 
   animation: transition-uncover 1s linear 0.2s forwards;
 }
@@ -176,8 +223,6 @@ h6 {
 /*#endregion */
 
 /*#region Color Token */
-#color-token-wrapper {
-}
 #color-token {
   position: absolute;
 
@@ -192,7 +237,7 @@ h6 {
   perspective: 1000px;
   transform-style: preserve-3d;
 }
-body.dark-mode .token {
+:root[data-theme='dark'] .token {
   transform: rotateY(180deg);
 }
 
@@ -206,12 +251,10 @@ body.dark-mode .token {
   backface-visibility: hidden;
 
   border-radius: 50%;
-  border: #000 0.2em solid;
+  border: 0.2em var(--border-color) solid;
   border-bottom-width: 0.3em;
 
-  background-color: #ececec;
-}
-.token-face.front-face {
+  background-color: var(--primary-color);
 }
 .token-face.back-face {
   transform: rotateY(180deg);
@@ -227,7 +270,7 @@ body.dark-mode .token {
   position: absolute;
   inset: 0;
 
-  filter: drop-shadow(0 0 5px rgba(0, 0, 0, 0.3));
+  filter: drop-shadow(0 0 5px rgba(from var(--shadow-color) r g b / 0.3));
   pointer-events: none;
 }
 #envelope.active-envelope .svgs-path {
@@ -248,8 +291,8 @@ body.dark-mode .token {
   width: min(50vw, 15rem, 150vh);
   aspect-ratio: 2;
 
-  border: solid black 2px;
-  background-color: whitesmoke;
+  border: solid var(--border-color) 2px;
+  background-color: var(--primary-color);
 }
 #envelope .envelope-top-flap {
   z-index: 0;
@@ -266,7 +309,9 @@ body.dark-mode .token {
 #envelope.active-envelope {
   width: min(80vw, 80vh);
 
-  filter: drop-shadow(20px 20px 20px hsl(0deg 0% 0% / 0.15));
+  filter: drop-shadow(
+    20px 20px 20px rgba(from var(--shadow-color) r g b / 0.15)
+  );
 
   --extra-transform: unset;
   will-change: width, filter, transform;
@@ -334,9 +379,9 @@ body.dark-mode .token {
   padding: 0.5rem;
   padding-bottom: 2rem;
 
-  background-color: whitesmoke;
-  border: solid black 2px;
-  filter: drop-shadow(0 4px 2px rgba(0, 0, 0, 0.3));
+  background-color: var(--page-color);
+  border: 2px var(--border-color) solid;
+  filter: drop-shadow(0 4px 2px rgba(from var(--shadow-color) r g b / 0.3));
 
   scrollbar-width: none;
   -ms-overflow-style: none;
@@ -438,8 +483,8 @@ body.dark-mode .token {
   padding: 0.2rem;
   padding-top: 0.7rem;
 
-  background-color: white;
-  border: solid black 2px;
+  background-color: var(--primary-color);
+  border: solid var(--border-color) 2px;
 
   border-bottom-left-radius: 15%;
   border-bottom-right-radius: 15%;
@@ -504,7 +549,7 @@ body.dark-mode .token {
   padding-left: 0.2rem;
   padding-bottom: 0.4rem;
 
-  border-left: black solid 4px;
+  border-left: 4px var(--border-color) solid;
 }
 
 .horizontal-center {
@@ -534,8 +579,8 @@ body.dark-mode .token {
   width: 15%;
   aspect-ratio: 1;
 
-  fill: #000;
-  color: #fff;
+  fill: var(--border-color);
+  color: var(--page-color);
 }
 .github-corner:hover .octo-arm {
   animation: octocat-wave 560ms ease-in-out;
@@ -587,13 +632,13 @@ body.dark-mode .token {
   a {
     display: inline-block;
 
-    color: #000;
+    color: var(--back-accent-color);
     fill: transparent;
 
     pointer-events: auto;
   }
   a:hover {
-    fill: #000;
+    fill: var(--back-accent-color);
   }
 
   a:first-child {
@@ -618,7 +663,7 @@ body.dark-mode .token {
   padding-left: 0.4rem;
   padding-right: 0.4rem;
 
-  border-bottom: #000 2px solid;
+  border-bottom: 2px var(--border-color) solid;
   border-radius: 0.2rem;
 
   text-transform: uppercase;
@@ -628,14 +673,14 @@ body.dark-mode .token {
 .highlight-button:focus-visible {
   border-radius: 0.6rem;
 
-  outline: 3px solid rgb(0, 0, 0);
+  outline: 3px var(--border-color) solid;
   outline-offset: 2px;
 }
 .highlight-button:hover span {
   border-radius: 0.6rem;
 
-  background-color: rgb(189, 213, 214);
-  box-shadow: #000 0px 3px 4px;
+  background-color: var(--front-accent-color);
+  box-shadow: var(--shadow-color) 0px 3px 4px;
 
   transform: translateY(-0.1rem);
 }
@@ -656,8 +701,8 @@ body.dark-mode .token {
 .clipboard-copy {
   display: inline-block;
 
-  color: darkcyan;
-  text-shadow: #0000 0px 4px 4px;
+  color: var(--link-normal-color);
+  text-shadow: transparent 0px 4px 4px;
 
   transition-duration: 0.2s;
 
@@ -668,13 +713,16 @@ body.dark-mode .token {
 .clipboard-copy:focus {
   transform: translate(0%, -0.1rem);
 
-  text-shadow: #0004 0px 4px 4px;
+  text-shadow: rgba(from var(--shadow-color) r g b / 0.267) 0px 4px 4px;
 }
 .clipboard-copy:active {
   transform: translate(0%, 0rem);
 
-  color: rgb(0, 77, 77);
-  text-shadow: #0000 0px 4px 4px;
+  color: var(--link-active-color);
+  text-shadow: transparent 0px 4px 4px;
+}
+.clipboard-copy:visited {
+  color: var(--link-visited-color);
 }
 
 /* Skills */

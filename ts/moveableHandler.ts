@@ -14,7 +14,7 @@ type MoveableObject = {
   root: HTMLElement;
   visual: HTMLElement;
 
-  // Position & Velocity in viewport units
+  // Position & Velocity in pixel units
   pos: Vec2;
   vel: Vec2;
 
@@ -61,14 +61,15 @@ const objects: MoveableObject[] = [];
 let pointerId: number | undefined = undefined;
 
 let zIndex: number = 0;
+
+let oldWindowSize: Vec2 = [window.innerWidth, window.innerHeight];
 //#endregion
 
 //#region Converstion Methods
-function VwToPx(vw: number): number {
+function vwToPx(vw: number): number {
   return (vw * window.innerWidth) / 100;
 }
-
-function VhToPx(vh: number): number {
+function vhToPx(vh: number): number {
   return (vh * window.innerHeight) / 100;
 }
 //#endregion
@@ -85,7 +86,7 @@ export function createMovableElement(
   const obj: MoveableObject = {
     root,
     visual,
-    pos: [VwToPx(pos[0]), VhToPx(pos[1])],
+    pos: [vwToPx(pos[0]), vhToPx(pos[1])],
     vel: [0, 0],
     origin,
     axes,
@@ -193,7 +194,6 @@ export function makeDraggable(
       }
       obj.vel = [0, 0];
     } else {
-      // Nice Accident. Not converting to viewport units weirdly feels good.
       obj.vel = [lastDeltaX, lastDeltaY];
     }
 
@@ -237,19 +237,29 @@ export function makedUntouched(el: HTMLElement): void {
 }
 //#endregion
 
-//#region Physics
+//#region Rendering
 function renderMovableElement(obj: MoveableObject): void {
   const style = obj.root.style;
   style.setProperty(TRANSLATE_OFFSET_X, `${obj.pos[0]}px`);
   style.setProperty(TRANSLATE_OFFSET_Y, `${obj.pos[1]}px`);
 }
+function renderAll(): void {
+  for (const obj of objects) {
+    renderMovableElement(obj);
+  }
+}
+
+function adjustAll(oldSize: Vec2, newSize: Vec2): void {
+  const ratio: Vec2 = [newSize[0] / oldSize[0], newSize[1] / oldSize[1]];
+  for (const obj of objects) {
+    obj.pos = [obj.pos[0] * ratio[0], obj.pos[1] * ratio[1]];
+  }
+}
+//#endregion
+
+//#region Movement
 function moveMovableElement(obj: MoveableObject): void {
-  if (obj.axes & MOVEMENT_AXES.HORIZONTAL) {
-    obj.pos[0] += obj.vel[0];
-  }
-  if (obj.axes & MOVEMENT_AXES.VERTICAL) {
-    obj.pos[1] += obj.vel[1];
-  }
+  moveMovableElementManual(obj, obj.vel);
 }
 function moveMovableElementManual(obj: MoveableObject, delta: Vec2): void {
   if (obj.axes & MOVEMENT_AXES.HORIZONTAL) {
@@ -259,6 +269,15 @@ function moveMovableElementManual(obj: MoveableObject, delta: Vec2): void {
     obj.pos[1] += delta[1];
   }
 }
+function setMovableElementPos(obj: MoveableObject, pos: Vec2): void {
+  if (obj.axes & MOVEMENT_AXES.HORIZONTAL) {
+    obj.pos[0] = pos[0];
+  }
+  if (obj.axes & MOVEMENT_AXES.VERTICAL) {
+    obj.pos[1] = pos[1];
+  }
+}
+
 function slowdownVelocity(obj: MoveableObject): void {
   if (obj.isDragged) {
     return;
@@ -278,8 +297,7 @@ function slowdownVelocity(obj: MoveableObject): void {
 }
 
 export function freezeObj(obj: MoveableObject): void {
-  obj.vel[0] = 0;
-  obj.vel[1] = 0;
+  obj.vel = [0, 0];
 }
 export function moveObjTo(
   visual: HTMLElement,
@@ -291,8 +309,7 @@ export function moveObjTo(
     return;
   }
 
-  obj.pos[0] = posX;
-  obj.pos[1] = posY;
+  setMovableElementPos(obj, [posX, posY]);
   obj.vel = [0, 0];
 
   makedUntouched(obj.root);
@@ -336,22 +353,25 @@ function getWallLimits(obj: MoveableObject): Rect2 {
 
 function resolveWallCollision(obj: MoveableObject): void {
   const limits = getWallLimits(obj);
+  const newPos = obj.pos;
 
-  if (obj.pos[0] > limits[2]) {
-    obj.pos[0] = limits[2];
+  if (newPos[0] > limits[2]) {
+    newPos[0] = limits[2];
     obj.vel[0] = Math.abs(obj.vel[0]) * -RESTITUTION;
-  } else if (obj.pos[0] < limits[0]) {
-    obj.pos[0] = limits[0];
+  } else if (newPos[0] < limits[0]) {
+    newPos[0] = limits[0];
     obj.vel[0] = Math.abs(obj.vel[0]) * RESTITUTION;
   }
 
-  if (obj.pos[1] > limits[3]) {
-    obj.pos[1] = limits[3];
+  if (newPos[1] > limits[3]) {
+    newPos[1] = limits[3];
     obj.vel[1] = Math.abs(obj.vel[1]) * -RESTITUTION;
-  } else if (obj.pos[1] < limits[1]) {
-    obj.pos[1] = limits[1];
+  } else if (newPos[1] < limits[1]) {
+    newPos[1] = limits[1];
     obj.vel[1] = Math.abs(obj.vel[1]) * RESTITUTION;
   }
+
+  setMovableElementPos(obj, newPos);
 }
 
 function resolveObjectCollision(a: MoveableObject, b: MoveableObject): void {
@@ -380,8 +400,8 @@ function resolveObjectCollision(a: MoveableObject, b: MoveableObject): void {
     const push = overlapX;
     const direction = centerAX < centerBX ? -1 : 1;
 
-    a.pos[0] += (push / 2) * direction;
-    b.pos[0] += (push / 2) * -direction;
+    moveMovableElementManual(a, [(push / 2) * direction, 0]);
+    moveMovableElementManual(b, [(push / 2) * -direction, 0]);
 
     const relativeVx = b.vel[0] - a.vel[0];
     if (relativeVx * direction < 0) {
@@ -393,8 +413,8 @@ function resolveObjectCollision(a: MoveableObject, b: MoveableObject): void {
     const push = overlapY;
     const direction = centerAY < centerBY ? -1 : 1;
 
-    a.pos[1] += (push / 2) * direction;
-    b.pos[1] += (push / 2) * -direction;
+    moveMovableElementManual(a, [0, (push / 2) * direction]);
+    moveMovableElementManual(b, [0, (push / 2) * -direction]);
 
     const relativeVy = b.vel[1] - a.vel[1];
     if (relativeVy * direction < 0) {
@@ -413,7 +433,16 @@ function resolveAllObjectCollisions(): void {
 }
 //#endregion
 
-//#region Slide
+//#region All
+window.addEventListener('resize', () => {
+  const newWindowSize: Vec2 = [window.innerWidth, window.innerHeight];
+
+  adjustAll(oldWindowSize, newWindowSize);
+  renderAll();
+
+  oldWindowSize = newWindowSize;
+});
+
 function updatePhysicsAll(): void {
   for (const obj of objects) {
     slowdownVelocity(obj);
@@ -422,10 +451,7 @@ function updatePhysicsAll(): void {
   }
 
   resolveAllObjectCollisions();
-
-  for (const obj of objects) {
-    renderMovableElement(obj);
-  }
+  renderAll();
 }
 
 function physicsLoop(): void {

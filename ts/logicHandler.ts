@@ -1,3 +1,4 @@
+import { toggleThemeMode } from './colorModeHandler.js';
 import {
   MOVEMENT_AXES,
   createMovableElement,
@@ -18,8 +19,6 @@ type NavRequest = {
 //#endregion
 
 //#region Constant ClassNames
-const DARKMODE_CLASSNAME = 'dark-mode';
-
 const ACTIVE_ENVELOPE_CLASSNAME = 'active-envelope';
 
 const PAGE_ENTERING_CLASS_NAME = 'page-is-entering';
@@ -327,21 +326,6 @@ function isEnvelopeClosed(): boolean {
 }
 //#endregion
 
-//#region Color Token
-function toggleDarkMode(toggle?: boolean): void {
-  if (toggle === undefined) {
-    document.body.classList.toggle(DARKMODE_CLASSNAME);
-    return;
-  }
-
-  if (toggle) {
-    document.body.classList.add(DARKMODE_CLASSNAME);
-    return;
-  }
-  document.body.classList.remove(DARKMODE_CLASSNAME);
-}
-//#endregion
-
 //#region Initialization Methods (Defined)
 function settupPrevPageClick(page: HTMLElement, url: URL): void {
   page.addEventListener('click', () => {
@@ -379,7 +363,7 @@ function registerAllMovableElements(): void {
       [76, 50],
       [0.5, 0.5],
       undefined,
-      toggleDarkMode
+      toggleThemeMode
     );
   }
 }
