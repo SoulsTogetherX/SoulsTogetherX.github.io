@@ -1,9 +1,3 @@
-disableKinds: ["taxonomy", "term"]
+disableKinds: ['taxonomy', 'term']
 
-baseURL: "https://xavier-alvarez.com/"
-locale: "en-us"
-title: "Xavier Alvarez"
-
-params:
-  description: "Xavier Alvarez's Web and Game Development Portfolio"
-  author: "Xavier Alvarez"
+baseURL: 'https://hello-xavier-alvarez.com/'

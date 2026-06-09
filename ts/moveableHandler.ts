@@ -55,14 +55,13 @@ const DRAG_THRESHOLD = 2;
 
 //#region Constants (Holders)
 const objects: MoveableObject[] = [];
+const registeredMethods: (() => void)[] = [];
 //#endregion
 
 //#region Public Variables
 let pointerId: number | undefined = undefined;
 
 let zIndex: number = 0;
-
-let oldWindowSize: Vec2 = [window.innerWidth, window.innerHeight];
 //#endregion
 
 //#region Converstion Methods
@@ -248,13 +247,6 @@ function renderAll(): void {
     renderMovableElement(obj);
   }
 }
-
-function adjustAll(oldSize: Vec2, newSize: Vec2): void {
-  const ratio: Vec2 = [newSize[0] / oldSize[0], newSize[1] / oldSize[1]];
-  for (const obj of objects) {
-    obj.pos = [obj.pos[0] * ratio[0], obj.pos[1] * ratio[1]];
-  }
-}
 //#endregion
 
 //#region Movement
@@ -433,16 +425,19 @@ function resolveAllObjectCollisions(): void {
 }
 //#endregion
 
+//#region PhysicsRegister
+export function registerToPhysicsUpdate(method: () => void): void {
+  registeredMethods.push(method);
+}
+export function unregisterToPhysicsUpdate(method: () => void): void {
+  const index = registeredMethods.indexOf(method);
+  if (index > -1) {
+    registeredMethods.splice(index, 1);
+  }
+}
+//#endregion
+
 //#region All
-window.addEventListener('resize', () => {
-  const newWindowSize: Vec2 = [window.innerWidth, window.innerHeight];
-
-  adjustAll(oldWindowSize, newWindowSize);
-  renderAll();
-
-  oldWindowSize = newWindowSize;
-});
-
 function updatePhysicsAll(): void {
   for (const obj of objects) {
     slowdownVelocity(obj);
@@ -452,6 +447,10 @@ function updatePhysicsAll(): void {
 
   resolveAllObjectCollisions();
   renderAll();
+
+  for (const method of registeredMethods) {
+    method();
+  }
 }
 
 function physicsLoop(): void {

@@ -6,6 +6,7 @@ import {
   moveObjTo,
   shiftByPixel,
   makedUntouched,
+  registerToPhysicsUpdate,
 } from './moveableHandler.js';
 
 //#region Type Defs
@@ -25,19 +26,26 @@ const PAGE_ENTERING_CLASS_NAME = 'page-is-entering';
 const PAGE_EXITING_CLASS_NAME = 'page-is-exiting';
 
 const DISABLE_MOVE_WRAPPER_CLASS_NAME = 'disable-move-wrapper';
+
+const HIDE_GUIDE_CLASS_NAME = 'hide';
 //#endregion
 
 //#region Constant Values (Helper)
 const FALLBACK_REDIRECTS = ['/', '/about'];
+
+const PENCIL_ROTATION = 50;
 //#endregion
 
 //#region Constant Queries
 const BG = document.getElementById('bg');
 
+const ENVELOPE_GUIDE = document.getElementById('envelope-helper-guide');
+
 const ENVELOPE_WRAPPER = document.getElementById('envelope-wrapper');
 const ENVELOPE = document.getElementById('envelope');
 
 const PENCIL_WRAPPER = document.getElementById('pencil-wrapper');
+const PENCIL = document.getElementById('pencil');
 
 const COLOR_TOKEN_WRAPPER = document.getElementById('color-token-wrapper');
 //#endregion
@@ -66,7 +74,6 @@ initializePages();
 //#region Misc Methods
 function comparePaths(path1: string, path2: string): boolean {
   const clean = (p: string) => p.replace(/[^a-zA-Z0-9/]|\/$/g, '');
-  console.log(path1, path2, clean(path1), clean(path2));
   return clean(path1) === clean(path2);
 }
 
@@ -104,6 +111,16 @@ document.addEventListener('popstate', () => {
 BG?.addEventListener('click', (_) => {
   toggleEnvelope(false);
 });
+
+if (ENVELOPE_GUIDE && ENVELOPE) {
+  ENVELOPE.addEventListener(
+    'click',
+    (_) => {
+      ENVELOPE_GUIDE.classList.add(HIDE_GUIDE_CLASS_NAME);
+    },
+    { once: true }
+  );
+}
 //#endregion
 
 //#region Document Methods
@@ -205,7 +222,11 @@ function onLinkClickCheck(event: PointerEvent) {
 
   const url = new URL(anchor.href);
   if (comparePaths(url.pathname, location.pathname)) {
-    toggleEnvelope(true);
+    if (isEnvelopeClosed()) {
+      toggleEnvelope(true);
+    } else if (currentMain) {
+      moveObjTo(currentMain, 0, -30);
+    }
     return;
   }
 
@@ -326,6 +347,35 @@ function isEnvelopeClosed(): boolean {
 }
 //#endregion
 
+//#region Pencil Rotate
+let pencilRotationAcceleration: number = 0;
+let pencilRotationSpeed: number = 0;
+let pencilRotation: number = 0;
+
+if (PENCIL) {
+  PENCIL.addEventListener('pointerdown', () => {
+    pencilRotationAcceleration = 0.1;
+    pencilRotationSpeed = 1;
+  });
+  document.addEventListener('pointerup', () => {
+    pencilRotationAcceleration = -0.5;
+  });
+}
+
+registerToPhysicsUpdate((): void => {
+  if (!PENCIL) {
+    return;
+  }
+
+  pencilRotationSpeed = Math.max(
+    Math.min(pencilRotationSpeed + pencilRotationAcceleration, PENCIL_ROTATION),
+    0
+  );
+  pencilRotation += pencilRotationSpeed;
+  PENCIL.style.setProperty('--pencil-rotation', `${pencilRotation}deg`);
+});
+//#endregion
+
 //#region Initialization Methods (Defined)
 function settupPrevPageClick(page: HTMLElement, url: URL): void {
   page.addEventListener('click', () => {
@@ -334,10 +384,10 @@ function settupPrevPageClick(page: HTMLElement, url: URL): void {
 }
 
 function registerAllMovableElements(): void {
-  if (ENVELOPE_WRAPPER) {
+  if (ENVELOPE_WRAPPER && ENVELOPE) {
     registerMovableElement(
       ENVELOPE_WRAPPER,
-      ENVELOPE_WRAPPER.firstElementChild as HTMLElement,
+      ENVELOPE,
       MOVEMENT_AXES.HORIZONTAL | MOVEMENT_AXES.VERTICAL,
       [50, 50],
       [0.5, 0.5],
@@ -345,10 +395,10 @@ function registerAllMovableElements(): void {
       () => toggleEnvelope(true)
     );
   }
-  if (PENCIL_WRAPPER) {
+  if (PENCIL_WRAPPER && PENCIL) {
     registerMovableElement(
       PENCIL_WRAPPER,
-      PENCIL_WRAPPER.firstElementChild as HTMLElement,
+      PENCIL,
       MOVEMENT_AXES.HORIZONTAL | MOVEMENT_AXES.VERTICAL,
       [50, 70],
       [0.5, 0.5],
