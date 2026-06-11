@@ -20,7 +20,7 @@ type NavRequest = {
 //#endregion
 
 //#region Constant ClassNames
-const ACTIVE_ENVELOPE_CLASSNAME = 'active-envelope';
+const ACTIVE_CLASSNAME = 'active';
 
 const PAGE_ENTERING_CLASS_NAME = 'page-is-entering';
 const PAGE_EXITING_CLASS_NAME = 'page-is-exiting';
@@ -38,6 +38,10 @@ const PENCIL_ROTATION = 50;
 
 //#region Constant Queries
 const BG = document.getElementById('bg');
+const CLOSE_BUTTON = document.getElementById('close-button');
+
+const DESKTOP_PAGE_HOLDER = document.getElementById('desktop-page-holder')!;
+const MOBILE_PAGE_HOLDER = document.getElementById('mobile-page-holder')!;
 
 const ENVELOPE_GUIDE = document.getElementById('envelope-helper-guide');
 
@@ -60,9 +64,10 @@ let pageId: number = 0;
 //#endregion
 
 //#region Public Queries
-let prevMain: HTMLElement | undefined;
+let mobileMain: HTMLElement | undefined;
 
-let currentMain: HTMLElement | undefined;
+let prevDesktopMain: HTMLElement | undefined;
+let currentDesktopMain: HTMLElement | undefined;
 let unregisterMovableElement = () => {};
 //#endregion
 
@@ -90,12 +95,25 @@ function isInternalLink(anchor: HTMLAnchorElement): boolean {
   const url = new URL(anchor.href, location.href);
   return url.origin === location.origin;
 }
-function waitForEvent(
+
+export function awaitAnyEvent(
   el: HTMLElement,
-  type: keyof HTMLElementEventMap
-): Promise<void> {
+  types: (keyof HTMLElementEventMap)[]
+): Promise<string> {
   return new Promise((resolve) => {
-    el.addEventListener(type, () => resolve(), { once: true });
+    const unregisterAll = () => {
+      for (const type of types) {
+        el.removeEventListener(type, resolveDefer);
+      }
+    };
+    const resolveDefer = (e: Event) => {
+      unregisterAll();
+      resolve(e.type);
+    };
+
+    for (const type of types) {
+      el.addEventListener(type, resolveDefer);
+    }
   });
 }
 //#endregion
@@ -104,13 +122,15 @@ function waitForEvent(
 // Navigation
 document.addEventListener('click', onLinkClickCheck, true);
 document.addEventListener('popstate', () => {
-  queueNavigation(new URL(location.href), 'pop', isEnvelopeClosed());
+  queueNavigation(new URL(location.href), 'pop', !isActive());
 });
 
 // Envelope
-BG?.addEventListener('click', (_) => {
-  toggleEnvelope(false);
-});
+{
+  const toggle = () => toggleEnvelope(false);
+  BG?.addEventListener('click', toggle);
+  CLOSE_BUTTON?.addEventListener('click', toggle);
+}
 
 if (ENVELOPE_GUIDE && ENVELOPE) {
   ENVELOPE.addEventListener(
@@ -134,73 +154,85 @@ async function fetchDocument(url: string): Promise<Document> {
   return new DOMParser().parseFromString(html, 'text/html');
 }
 
-function buildIncomingMain(nextDoc: Document): HTMLElement {
+function buildIncomingMain(nextDoc: Document): [HTMLElement, HTMLElement] {
   const next = nextDoc.querySelector('main');
   if (!next) {
     throw new Error('Missing main in fetched page');
   }
 
-  const incoming = document.createElement('main');
-  incoming.innerHTML = next.innerHTML;
+  const desktop = document.createElement('main');
+  desktop.innerHTML = next.innerHTML;
 
-  incoming.setAttribute('id', `page-${pageId}`);
+  desktop.setAttribute('id', `page-${pageId}`);
   pageId += 1;
 
-  if (next.className) {
-    incoming.className = next.className;
-  }
+  const mobile = desktop.cloneNode(true) as HTMLElement;
+  mobile.setAttribute('id', `page-${pageId}`);
+  pageId += 1;
 
-  return incoming;
+  desktop.className = currentDesktopMain?.className ?? '';
+  mobile.className = mobileMain?.className ?? '';
+
+  return [desktop, mobile];
 }
 
 async function transitionMain(nextDoc: Document): Promise<void> {
-  if (!currentMain) {
+  if (!currentDesktopMain) {
     throw new Error('Missing current main');
   }
 
-  const parent = currentMain.parentElement;
-  if (!parent) {
-    throw new Error('Missing main parent element');
+  prevDesktopMain?.remove();
+
+  const [desktop, mobile] = buildIncomingMain(nextDoc);
+
+  if (mobileMain) {
+    mobileMain.remove();
   }
+  MOBILE_PAGE_HOLDER.insertBefore(mobile, null);
+  mobileMain = mobile;
 
-  prevMain?.remove();
-
-  const incoming = buildIncomingMain(nextDoc);
-  parent.insertBefore(incoming, currentMain);
+  DESKTOP_PAGE_HOLDER.insertBefore(desktop, currentDesktopMain);
 
   unregisterMovableElement();
-  unregisterMovableElement = initializeCurrentPage(incoming);
+  unregisterMovableElement = initializeCurrentPage(desktop);
 
-  incoming.classList.add(PAGE_ENTERING_CLASS_NAME);
-  currentMain.classList.add(PAGE_EXITING_CLASS_NAME);
+  currentDesktopMain.classList.add(PAGE_EXITING_CLASS_NAME);
 
-  await waitForEvent(incoming, 'animationend');
+  if (desktop.checkVisibility()) {
+    desktop.classList.add(PAGE_ENTERING_CLASS_NAME);
 
-  incoming.classList.remove(PAGE_ENTERING_CLASS_NAME);
+    await awaitAnyEvent(desktop, ['animationend', 'animationcancel']);
 
-  prevMain = currentMain;
-  prevMain.setAttribute('aria-hidden', 'true');
-  currentMain = incoming;
+    desktop.classList.remove(PAGE_ENTERING_CLASS_NAME);
+  }
+
+  prevDesktopMain = currentDesktopMain;
+  prevDesktopMain.setAttribute('aria-hidden', 'true');
+  currentDesktopMain = desktop;
 }
 function forceMain(nextDoc: Document): void {
-  if (!currentMain) {
+  if (!currentDesktopMain) {
     throw new Error('Missing current main');
   }
 
-  const parent = currentMain.parentElement;
-  if (!parent) {
-    throw new Error('Missing parent element for main');
-  }
+  const [desktop, mobile] = buildIncomingMain(nextDoc);
 
-  const incoming = buildIncomingMain(nextDoc);
-  parent.insertBefore(incoming, currentMain.nextSibling);
+  // Mobile
+  if (mobileMain) {
+    mobileMain.remove();
+  }
+  MOBILE_PAGE_HOLDER.insertBefore(mobile, null);
+  mobileMain = mobile;
+
+  // Desktop
+  DESKTOP_PAGE_HOLDER.insertBefore(desktop, currentDesktopMain.nextSibling);
 
   unregisterMovableElement();
-  unregisterMovableElement = initializeCurrentPage(incoming);
+  unregisterMovableElement = initializeCurrentPage(desktop);
 
-  prevMain = currentMain;
-  prevMain.setAttribute('aria-hidden', 'true');
-  currentMain = incoming;
+  prevDesktopMain = currentDesktopMain;
+  prevDesktopMain.setAttribute('aria-hidden', 'true');
+  currentDesktopMain = desktop;
 }
 //#endregion
 
@@ -222,15 +254,15 @@ function onLinkClickCheck(event: PointerEvent) {
 
   const url = new URL(anchor.href);
   if (comparePaths(url.pathname, location.pathname)) {
-    if (isEnvelopeClosed()) {
+    if (!isActive()) {
       toggleEnvelope(true);
-    } else if (currentMain) {
-      moveObjTo(currentMain, 0, -30);
+    } else if (currentDesktopMain) {
+      moveObjTo(currentDesktopMain, 0, -30);
     }
     return;
   }
 
-  queueNavigation(url, 'push', isEnvelopeClosed());
+  queueNavigation(url, 'push', !isActive());
   toggleEnvelope(true);
 }
 
@@ -259,12 +291,12 @@ async function runNavigation(req: NavRequest): Promise<void> {
       return;
     }
 
-    if (currentMain) {
-      settupPrevPageClick(currentMain, new URL(window.location.href));
+    if (currentDesktopMain) {
+      settupPrevPageClick(currentDesktopMain, new URL(window.location.href));
     }
 
-    if (currentMain) {
-      moveObjTo(currentMain, 0, -30);
+    if (currentDesktopMain) {
+      moveObjTo(currentDesktopMain, 0, -30);
     }
 
     if (req.force) {
@@ -302,48 +334,47 @@ function toggleEnvelope(toggle: boolean): void {
   makedUntouched(ENVELOPE_WRAPPER);
 
   if (toggle) {
-    if (!ENVELOPE.classList.contains(ACTIVE_ENVELOPE_CLASSNAME)) {
-      if (prevMain) {
-        moveObjTo(prevMain, 0, -30);
+    if (!isActive()) {
+      if (prevDesktopMain) {
+        moveObjTo(prevDesktopMain, 0, -30);
       }
-      if (currentMain) {
-        moveObjTo(currentMain, 0, -30);
+      if (currentDesktopMain) {
+        moveObjTo(currentDesktopMain, 0, -30);
       }
 
-      prevMain?.classList.add('ease-delay-page');
-      currentMain?.classList.add('ease-delay-page');
+      if (ENVELOPE.checkVisibility()) {
+        prevDesktopMain?.classList.add('ease-delay-page');
+        currentDesktopMain?.classList.add('ease-delay-page');
 
-      waitForEvent(ENVELOPE, 'transitionend').then(() => {
-        prevMain?.classList.remove('ease-delay-page');
-        currentMain?.classList.remove('ease-delay-page');
-      });
+        awaitAnyEvent(ENVELOPE, ['transitionend', 'transitioncancel']).then(
+          () => {
+            prevDesktopMain?.classList.remove('ease-delay-page');
+            currentDesktopMain?.classList.remove('ease-delay-page');
+          }
+        );
+      }
     }
 
     ENVELOPE_WRAPPER.classList.add(DISABLE_MOVE_WRAPPER_CLASS_NAME);
-
-    if (!ENVELOPE.classList.contains(ACTIVE_ENVELOPE_CLASSNAME)) {
-      ENVELOPE.classList.add(ACTIVE_ENVELOPE_CLASSNAME);
-    }
+    document.body.classList.add(ACTIVE_CLASSNAME);
     return;
   }
 
-  prevMain?.classList.add('ease-page');
-  currentMain?.classList.add('ease-page');
+  if (ENVELOPE.checkVisibility()) {
+    prevDesktopMain?.classList.add('ease-page');
+    currentDesktopMain?.classList.add('ease-page');
 
-  waitForEvent(ENVELOPE, 'transitionend').then(() => {
-    prevMain?.classList.remove('ease-page');
-    currentMain?.classList.remove('ease-page');
-  });
-
-  ENVELOPE_WRAPPER.classList.remove(DISABLE_MOVE_WRAPPER_CLASS_NAME);
-  ENVELOPE.classList.remove(ACTIVE_ENVELOPE_CLASSNAME);
-}
-function isEnvelopeClosed(): boolean {
-  if (!ENVELOPE) {
-    return true;
+    awaitAnyEvent(ENVELOPE, ['transitionend', 'transitioncancel']).then(() => {
+      prevDesktopMain?.classList.remove('ease-page');
+      currentDesktopMain?.classList.remove('ease-page');
+    });
   }
 
-  return !ENVELOPE.classList.contains(ACTIVE_ENVELOPE_CLASSNAME);
+  ENVELOPE_WRAPPER.classList.remove(DISABLE_MOVE_WRAPPER_CLASS_NAME);
+  document.body.classList.remove(ACTIVE_CLASSNAME);
+}
+function isActive(): boolean {
+  return document.body.classList.contains(ACTIVE_CLASSNAME);
 }
 //#endregion
 
@@ -460,15 +491,17 @@ function initializePage(
 }
 
 async function initializePages(): Promise<void> {
-  currentMain = document.querySelector('main') as HTMLElement | undefined;
+  // Desktop
+  currentDesktopMain = DESKTOP_PAGE_HOLDER.querySelector('main') as
+    | HTMLElement
+    | undefined;
+  // Mobile
+  mobileMain = MOBILE_PAGE_HOLDER.querySelector('main') as
+    | HTMLElement
+    | undefined;
 
-  if (!currentMain) {
+  if (!currentDesktopMain || !mobileMain) {
     throw new Error('Missing current main');
-  }
-
-  const parent = currentMain.parentElement;
-  if (!parent) {
-    throw new Error('Missing parent element for main');
   }
 
   const pathname =
@@ -477,13 +510,19 @@ async function initializePages(): Promise<void> {
     ];
   const nextDoc = await fetchDocument(pathname);
 
-  prevMain = buildIncomingMain(nextDoc);
-  parent.insertBefore(prevMain, currentMain);
-  settupPrevPageClick(prevMain, new URL(pathname, window.location.origin));
+  const [desktop, _] = buildIncomingMain(nextDoc);
 
-  unregisterMovableElement = initializeCurrentPage(currentMain);
-  initializePage(prevMain, false);
+  // Desktop
+  prevDesktopMain = desktop;
+  DESKTOP_PAGE_HOLDER.insertBefore(prevDesktopMain, currentDesktopMain);
+  settupPrevPageClick(
+    prevDesktopMain,
+    new URL(pathname, window.location.origin)
+  );
 
-  prevMain.setAttribute('aria-hidden', 'true');
+  unregisterMovableElement = initializeCurrentPage(currentDesktopMain);
+  initializePage(prevDesktopMain, false);
+
+  prevDesktopMain.setAttribute('aria-hidden', 'true');
 }
 //#endregion
