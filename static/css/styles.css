@@ -37,6 +37,11 @@ body {
 /*#endregion*/
 
 /*#region Tag Styles*/
+html {
+  scrollbar-width: thin;
+  scrollbar-color: var(--back-accent-color) var(--page-color); /* thumb color | track color */
+}
+
 html,
 body {
   position: relative;
@@ -159,6 +164,11 @@ h6 {
     100% 15px,
     100% 15px;
 }
+.disable-highlight {
+  -webkit-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+}
 
 .svg-color {
   fill: var(--primary-color);
@@ -266,21 +276,20 @@ h6 {
   aspect-ratio: 10;
 
   transform-origin: left top;
-  transform: translate(var(--origin-offset-x, 0), var(--origin-offset-y, 0))
-    var(--extra-transform,);
+
+  filter: drop-shadow(
+    calc(1px * cos(var(--pencil-rotation) - 90deg))
+      calc(-1px * sin(var(--pencil-rotation) - 90deg)) 2px hsl(0deg 0% 0% / 0.6)
+  );
 
   rotate: var(--pencil-rotation);
   transition:
     rotate linear 0s,
     transform ease 0.3s;
 }
-#pencil.grab-hover {
-  filter: drop-shadow(
-    calc(1px * cos(var(--pencil-rotation) - 90deg))
-      calc(-1px * sin(var(--pencil-rotation) - 90deg)) 2px hsl(0deg 0% 0% / 0.6)
-  );
-}
-#pencil.grab-hover:hover {
+#pencil:hover {
+  --extra-transform: scale(1.1);
+
   filter: drop-shadow(
     calc(16px * cos(var(--pencil-rotation) - 90deg))
       calc(-16px * sin(var(--pencil-rotation) - 90deg)) 16px
@@ -533,6 +542,7 @@ body.active #envelope .envelope-top-flap {
   padding-bottom: 2rem;
 
   border: 2px var(--border-color) solid;
+  scrollbar-width: none;
 }
 #desktop-show .page-content {
   background-color: var(--page-color);
@@ -715,7 +725,7 @@ body.active #envelope-nav li:hover {
 
 /*      Animation Delays */
 #envelope #envelope-nav a:nth-child(1) li {
-  transition-delay: 0.2s;
+  transition-delay: 0.2s, 0s;
 }
 #envelope #envelope-nav a:nth-child(2) li {
   transition-delay: 0.15s;
@@ -758,6 +768,8 @@ body.active #envelope-nav a:nth-child(5) li {
 
 .interactive-list {
   margin-top: 0.3rem;
+
+  width: fit-content;
 
   li:hover {
     padding-left: 2rem;
@@ -880,8 +892,6 @@ header.home-header {
 
   text-align: center;
 
-  transition: fill ease 0.3s;
-
   a {
     display: inline-block;
 
@@ -903,6 +913,10 @@ header.home-header {
   }
   a:last-child {
     margin-right: auto;
+  }
+
+  path {
+    transition: fill ease 0.2s;
   }
 }
 /* About */

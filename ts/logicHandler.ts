@@ -1,3 +1,4 @@
+import { playPresetSFX, playSoundEffectRandom } from './audioHandler.js';
 import { toggleThemeMode } from './colorModeHandler.js';
 import {
   MOVEMENT_AXES,
@@ -34,6 +35,16 @@ const HIDE_GUIDE_CLASS_NAME = 'hide';
 const FALLBACK_REDIRECTS = ['/', '/about'];
 
 const PENCIL_ROTATION = 50;
+
+const AUDIO_BUTTON_CLASSNAME: string = 'audio-button';
+
+const BUBBLE_CLASSNAME: string = 'bubble-pop';
+const BUBBLE_TIMEOUT: number = 50;
+
+const MIN_BUBBLE_PITCH: number = 0.5;
+const MAX_BUBBLE_PITCH: number = 1.3;
+const INC_BUBBLE_PITCH: number = 0.05;
+const RANGE_BUBBLE_PITCH: number = 0.05;
 //#endregion
 
 //#region Constant Queries
@@ -61,6 +72,9 @@ let pendingNav: NavRequest | undefined = undefined;
 let navSeq: number = 0;
 
 let pageId: number = 0;
+
+let bubbleEscalation: number = MIN_BUBBLE_PITCH;
+let bubbleTimerId: number | undefined = undefined;
 //#endregion
 
 //#region Public Queries
@@ -69,11 +83,6 @@ let mobileMain: HTMLElement | undefined;
 let prevDesktopMain: HTMLElement | undefined;
 let currentDesktopMain: HTMLElement | undefined;
 let unregisterMovableElement = () => {};
-//#endregion
-
-//#region Initialization Methods (Called)
-registerAllMovableElements();
-initializePages();
 //#endregion
 
 //#region Misc Methods
@@ -199,10 +208,10 @@ async function transitionMain(nextDoc: Document): Promise<void> {
   currentDesktopMain.classList.add(PAGE_EXITING_CLASS_NAME);
 
   if (desktop.checkVisibility()) {
+    playPresetSFX('page-change');
+
     desktop.classList.add(PAGE_ENTERING_CLASS_NAME);
-
     await awaitAnyEvent(desktop, ['animationend', 'animationcancel']);
-
     desktop.classList.remove(PAGE_ENTERING_CLASS_NAME);
   }
 
@@ -237,7 +246,7 @@ function forceMain(nextDoc: Document): void {
 //#endregion
 
 //#region Navigation Methods
-function onLinkClickCheck(event: PointerEvent) {
+function onLinkClickCheck(event: PointerEvent): void {
   const target = event.target as Element | null;
   const anchor = target?.closest('a') as HTMLAnchorElement | null;
 
@@ -287,10 +296,6 @@ async function runNavigation(req: NavRequest): Promise<void> {
     const nextDoc = await fetchDocument(req.url.href);
     if (mySeq !== navSeq) return;
 
-    if (comparePaths(req.url.pathname, location.pathname)) {
-      return;
-    }
-
     if (currentDesktopMain) {
       settupPrevPageClick(currentDesktopMain, new URL(window.location.href));
     }
@@ -318,9 +323,11 @@ async function runNavigation(req: NavRequest): Promise<void> {
       const next = pendingNav;
       pendingNav = undefined;
       await runNavigation(next);
+      return;
     }
 
     busy = false;
+    initalizeAusioClasses();
   }
 }
 //#endregion
@@ -334,25 +341,31 @@ function toggleEnvelope(toggle: boolean): void {
   makedUntouched(ENVELOPE_WRAPPER);
 
   if (toggle) {
-    if (!isActive()) {
-      if (prevDesktopMain) {
-        moveObjTo(prevDesktopMain, 0, -30);
-      }
-      if (currentDesktopMain) {
-        moveObjTo(currentDesktopMain, 0, -30);
-      }
+    if (isActive()) {
+      return;
+    }
 
-      if (ENVELOPE.checkVisibility()) {
-        prevDesktopMain?.classList.add('ease-delay-page');
-        currentDesktopMain?.classList.add('ease-delay-page');
+    if (prevDesktopMain) {
+      moveObjTo(prevDesktopMain, 0, -30);
+    }
+    if (currentDesktopMain) {
+      moveObjTo(currentDesktopMain, 0, -30);
+    }
 
-        awaitAnyEvent(ENVELOPE, ['transitionend', 'transitioncancel']).then(
-          () => {
-            prevDesktopMain?.classList.remove('ease-delay-page');
-            currentDesktopMain?.classList.remove('ease-delay-page');
-          }
-        );
-      }
+    if (ENVELOPE.checkVisibility()) {
+      playPresetSFX('envelope-open');
+
+      prevDesktopMain?.classList.add('ease-delay-page');
+      currentDesktopMain?.classList.add('ease-delay-page');
+
+      awaitAnyEvent(ENVELOPE, ['transitionend', 'transitioncancel']).then(
+        () => {
+          prevDesktopMain?.classList.remove('ease-delay-page');
+          currentDesktopMain?.classList.remove('ease-delay-page');
+        }
+      );
+    } else {
+      playPresetSFX('open-window');
     }
 
     ENVELOPE_WRAPPER.classList.add(DISABLE_MOVE_WRAPPER_CLASS_NAME);
@@ -360,7 +373,13 @@ function toggleEnvelope(toggle: boolean): void {
     return;
   }
 
+  if (!isActive()) {
+    return;
+  }
+
   if (ENVELOPE.checkVisibility()) {
+    playPresetSFX('drop');
+
     prevDesktopMain?.classList.add('ease-page');
     currentDesktopMain?.classList.add('ease-page');
 
@@ -368,12 +387,14 @@ function toggleEnvelope(toggle: boolean): void {
       prevDesktopMain?.classList.remove('ease-page');
       currentDesktopMain?.classList.remove('ease-page');
     });
+  } else {
+    playPresetSFX('close-window');
   }
 
   ENVELOPE_WRAPPER.classList.remove(DISABLE_MOVE_WRAPPER_CLASS_NAME);
   document.body.classList.remove(ACTIVE_CLASSNAME);
 }
-function isActive(): boolean {
+export function isActive(): boolean {
   return document.body.classList.contains(ACTIVE_CLASSNAME);
 }
 //#endregion
@@ -407,6 +428,69 @@ registerToPhysicsUpdate((): void => {
 });
 //#endregion
 
+//#region Audio Methods
+function initalizeAusioClasses(): void {
+  Array.from(document.getElementsByClassName(BUBBLE_CLASSNAME)).forEach(
+    bubblePop
+  );
+  Array.from(document.getElementsByClassName(AUDIO_BUTTON_CLASSNAME)).forEach(
+    buttonSounds
+  );
+}
+
+function playBubbleSFX(): void {
+  if (bubbleTimerId) {
+    return;
+  }
+
+  bubbleTimerId = setTimeout(() => {
+    bubbleTimerId = undefined;
+  }, BUBBLE_TIMEOUT);
+
+  playSoundEffectRandom(
+    'pop',
+    bubbleEscalation - RANGE_BUBBLE_PITCH,
+    bubbleEscalation + RANGE_BUBBLE_PITCH,
+    0.45
+  );
+
+  bubbleEscalation += INC_BUBBLE_PITCH;
+  if (bubbleEscalation > MAX_BUBBLE_PITCH) {
+    bubbleEscalation = MIN_BUBBLE_PITCH;
+  }
+}
+function bubblePop(el: Element): void {
+  if (!(el instanceof HTMLElement)) {
+    return;
+  }
+  el.addEventListener('pointerenter', playBubbleSFX);
+}
+
+function playButtonClickSFX(): void {
+  playPresetSFX('button-click');
+}
+function playLinkButtonHoverSFX(): void {
+  playPresetSFX('link-button-hover');
+}
+function playButtonHoverSFX(): void {
+  playPresetSFX('button-hover');
+}
+function buttonSounds(el: Element): void {
+  if (!(el instanceof HTMLElement)) {
+    return;
+  }
+
+  if (!el.hasAttribute('no-press')) {
+    el.addEventListener('click', playButtonClickSFX);
+  }
+  if (el.hasAttribute('link-button')) {
+    el.addEventListener('pointerenter', playLinkButtonHoverSFX);
+    return;
+  }
+  el.addEventListener('pointerenter', playButtonHoverSFX);
+}
+//#endregion
+
 //#region Initialization Methods (Defined)
 function settupPrevPageClick(page: HTMLElement, url: URL): void {
   page.addEventListener('click', () => {
@@ -415,6 +499,11 @@ function settupPrevPageClick(page: HTMLElement, url: URL): void {
 }
 
 function registerAllMovableElements(): void {
+  const toggleThemeWithSFX = () => {
+    playPresetSFX('light-switch');
+    toggleThemeMode();
+  };
+
   if (ENVELOPE_WRAPPER && ENVELOPE) {
     registerMovableElement(
       ENVELOPE_WRAPPER,
@@ -423,7 +512,8 @@ function registerAllMovableElements(): void {
       [50, 50],
       [0.5, 0.5],
       undefined,
-      () => toggleEnvelope(true)
+      () => toggleEnvelope(true),
+      true
     );
   }
   if (PENCIL_WRAPPER && PENCIL) {
@@ -431,9 +521,11 @@ function registerAllMovableElements(): void {
       PENCIL_WRAPPER,
       PENCIL,
       MOVEMENT_AXES.HORIZONTAL | MOVEMENT_AXES.VERTICAL,
-      [50, 70],
+      [50, 30],
       [0.5, 0.5],
-      undefined
+      undefined,
+      undefined,
+      true
     );
   }
   if (COLOR_TOKEN_WRAPPER) {
@@ -444,7 +536,8 @@ function registerAllMovableElements(): void {
       [76, 50],
       [0.5, 0.5],
       undefined,
-      toggleThemeMode
+      toggleThemeWithSFX,
+      true
     );
   }
 }
@@ -486,7 +579,9 @@ function initializePage(
     MOVEMENT_AXES.VERTICAL,
     [0, -30],
     [0, 0],
-    [0, -1, 1, 0]
+    [0, -1, 1, 0],
+    undefined,
+    false
   );
 }
 
@@ -525,4 +620,10 @@ async function initializePages(): Promise<void> {
 
   prevDesktopMain.setAttribute('aria-hidden', 'true');
 }
+//#endregion
+
+//#region Initialization Methods (Called)
+registerAllMovableElements();
+initializePages();
+initalizeAusioClasses();
 //#endregion

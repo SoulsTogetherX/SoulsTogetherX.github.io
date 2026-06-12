@@ -4,9 +4,18 @@
 </head>
 
 <body>
-  <div id="bg" aria-hidden="true"></div>
+  <div
+    id="bg"
+    class="sound-element"
+    sound-type="click"
+    aria-hidden="true"
+  ></div>
 
   <div id="desktop-show">
+    {{ partial "./objs/colorToken" }}
+    {{ partial "./objs/pencil" }}
+
+
     <div id="envelope-wrapper" class="movable-wrapper">
       <div id="envelope-helper-guide">Click or Drag me</div>
       <div id="envelope" class="movable-origin-offset grab-hover">
@@ -20,9 +29,6 @@
         {{ partial "/envelope/envelopeNav" }}
       </div>
     </div>
-
-    {{ partial "./objs/colorToken" }}
-    {{ partial "./objs/pencil" }}
   </div>
 
   <div id="mobile-show">
@@ -39,7 +45,7 @@
 
 
       <div id="mobile-page-holder">
-        <main class="mobile-page-scroll scroll-gradient">
+        <main class="mobile-page-scroll scroll-gradient disable-highlight">
           {{ block "main" . }}
           {{ end }}
         </main>

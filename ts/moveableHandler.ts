@@ -1,3 +1,7 @@
+//#region Imports
+import { playPresetSFX } from './audioHandler.js';
+//#endregion
+
 //#region Type Defs
 type Vec2 = [number, number];
 type Rect2 = [number, number, number, number];
@@ -28,7 +32,9 @@ type MoveableObject = {
   limits?: Rect2;
 
   // Other
+  isLocked?: boolean;
   isDragged?: boolean;
+  soundPlayed?: boolean;
 };
 //#endregion
 
@@ -106,7 +112,8 @@ export function registerMovableElement(
   pos: Vec2,
   origin: Vec2,
   limits: Rect2 | undefined,
-  onClick: (() => void) | undefined = undefined
+  onClick: (() => void) | undefined = undefined,
+  sound: boolean = false
 ): () => void {
   const obj: MoveableObject = createMovableElement(
     root,
@@ -117,7 +124,7 @@ export function registerMovableElement(
     limits
   );
 
-  const unregister = makeDraggable(obj, onClick);
+  const unregister = makeDraggable(obj, onClick, sound);
   objects.push(obj);
 
   return () => {
@@ -132,7 +139,8 @@ export function registerMovableElement(
 
 export function makeDraggable(
   obj: MoveableObject,
-  onClick: (() => void) | undefined = undefined
+  onClick: (() => void) | undefined = undefined,
+  sound: boolean = false
 ): () => void {
   const root = obj.root;
   const visual = obj.visual;
@@ -142,12 +150,25 @@ export function makeDraggable(
   let lastDeltaX = 0,
     lastDeltaY = 0;
 
-  function onPointerEnter(_: PointerEvent) {
+  function onPointerEnter(_: PointerEvent): void {
+    if (!obj.isLocked) {
+      obj.soundPlayed = false;
+    }
     root.style.zIndex = String(++zIndex);
   }
+  function playSound(_: PointerEvent): void {
+    if (obj.isLocked || document.body.classList.contains('active')) {
+      return;
+    }
 
-  function onPointerDown(e: PointerEvent) {
-    if (obj.isDragged) {
+    if (obj.soundPlayed === false) {
+      playPresetSFX('drop');
+    }
+    obj.soundPlayed = true;
+  }
+
+  function onPointerDown(e: PointerEvent): void {
+    if (obj.isDragged || obj.isLocked) {
       return;
     }
 
@@ -156,6 +177,8 @@ export function makeDraggable(
     } else if (pointerId !== e.pointerId) {
       return;
     }
+
+    obj.isLocked = true;
 
     prevX = e.pageX;
     prevY = e.pageY;
@@ -168,7 +191,7 @@ export function makeDraggable(
     document.body.addEventListener('pointerleave', onPointerUp);
     window.addEventListener('pointercancle', clearBehavior);
   }
-  function onPointerMove(e: PointerEvent) {
+  function onPointerMove(e: PointerEvent): void {
     lastDeltaX = e.pageX - prevX;
     lastDeltaY = e.pageY - prevY;
     prevX = e.pageX;
@@ -186,7 +209,7 @@ export function makeDraggable(
     moveMovableElementManual(obj, [lastDeltaX, lastDeltaY]);
     renderMovableElement(obj);
   }
-  function onPointerUp() {
+  function onPointerUp(): void {
     if (!obj.isDragged) {
       if (onClick) {
         onClick();
@@ -195,12 +218,12 @@ export function makeDraggable(
     } else {
       obj.vel = [lastDeltaX, lastDeltaY];
     }
-
     clearBehavior();
   }
 
-  function clearBehavior() {
+  function clearBehavior(): void {
     pointerId = undefined;
+    obj.isLocked = false;
     obj.isDragged = false;
 
     window.removeEventListener('pointermove', onPointerMove);
@@ -212,7 +235,17 @@ export function makeDraggable(
   visual.addEventListener('pointerenter', onPointerEnter);
   visual.addEventListener('pointerdown', onPointerDown);
 
+  if (sound === true) {
+    visual.addEventListener('pointerleave', playSound);
+    visual.addEventListener('pointerup', playSound);
+  }
+
   return () => {
+    if (sound === true) {
+      visual.removeEventListener('pointerleave', playSound);
+      visual.removeEventListener('pointerup', playSound);
+    }
+
     visual.removeEventListener('pointerenter', onPointerEnter);
     visual.removeEventListener('pointerdown', onPointerDown);
     clearBehavior();
