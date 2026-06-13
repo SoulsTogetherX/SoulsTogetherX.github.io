@@ -1,0 +1,13 @@
+<script>
+  const savedTheme = localStorage.getItem('theme');
+  const systemPrefersDark = window.matchMedia(
+    '(prefers-color-scheme: dark)'
+  ).matches;
+  if (savedTheme !== null && systemPrefersDark === 'dark') {
+    document.body.classList.add('dark-mode');
+  }
+  document.documentElement.setAttribute(
+    'data-theme',
+    savedTheme ?? (systemPrefersDark ? 'dark' : 'light')
+  );
+</script>
