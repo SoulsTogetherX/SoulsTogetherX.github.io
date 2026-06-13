@@ -35,6 +35,8 @@ const DISABLE_MOVE_WRAPPER_CLASS_NAME = 'disable-move-wrapper';
 const HIDE_GUIDE_CLASS_NAME = 'hide';
 
 const CLIPBOARD_COPY = 'clipboard-copy';
+const CLIPBOARD_CLICKED = 'clicked';
+
 const AUDIO_BUTTON_CLASSNAME: string = 'audio-button';
 //#endregion
 
@@ -482,9 +484,10 @@ function pencilWoosh(): void {
 //#region Element Methods
 function initalizeElementClasses(): void {
   Array.from(document.getElementsByClassName(CLIPBOARD_COPY)).forEach((el) =>
-    el.addEventListener('click', () =>
-      setClipboard(el.getAttribute('clipboard') ?? '')
-    )
+    el.addEventListener('click', () => {
+      el.classList.add(CLIPBOARD_CLICKED);
+      setClipboard(el.getAttribute('clipboard') ?? '');
+    })
   );
 
   Array.from(document.getElementsByClassName(BUBBLE_CLASSNAME)).forEach(

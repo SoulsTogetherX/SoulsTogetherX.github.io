@@ -271,6 +271,60 @@ body {
 }
 /*#endregion */
 
+/*#region Floating Bubble*/
+:root[data-theme='dark'] .floating-bubble {
+  color: var(--front-accent-color);
+}
+.floating-bubble {
+  position: absolute;
+  top: 0;
+  left: 0;
+
+  width: fit-content;
+
+  border-radius: 10%;
+
+  border: var(--border-color) solid 2px;
+  background-color: var(--page-color);
+
+  transform: translate(-50%, 0%);
+
+  text-align: center;
+
+  pointer-events: none;
+
+  transition: all ease 0.3s;
+}
+.floating-bubble::before {
+  content: '';
+  position: absolute;
+
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+
+  border-width: calc(1rem + 2px);
+  border-style: solid;
+  border-color: var(--border-color) transparent transparent transparent;
+
+  transition: all ease 0.3s;
+}
+.floating-bubble::after {
+  content: '';
+  position: absolute;
+
+  top: calc(100% - 1px);
+  left: 50%;
+  transform: translateX(-50%);
+
+  border-width: 1rem;
+  border-style: solid;
+  border-color: var(--page-color) transparent transparent transparent;
+
+  transition: all ease 0.3s;
+}
+/*#endregion*/
+
 /*#region Pencil */
 #pencil {
   position: absolute;
@@ -352,16 +406,9 @@ body.mute-audio #sound-token .token {
 }
 
 /* Envelope Guide */
-:root[data-theme='dark'] #envelope-helper-guide {
-  color: var(--front-accent-color);
-}
 #envelope-helper-guide {
-  position: absolute;
   z-index: -1;
   top: max(-50vw, -9rem, -150vh);
-  left: 0;
-
-  width: fit-content;
 
   padding-top: 1rem;
   padding-bottom: 1rem;
@@ -371,48 +418,7 @@ body.mute-audio #sound-token .token {
   margin-left: 0.5rem;
   margin-right: 0.5rem;
 
-  border-radius: 10%;
-
-  border: var(--border-color) solid 2px;
-  background-color: var(--page-color);
-
-  transform: translate(-50%, 0%);
-
-  text-align: center;
-
-  pointer-events: none;
-
-  transition: all ease 0.3s;
-
   animation: guide-bop 2s ease infinite;
-}
-#envelope-helper-guide::before {
-  content: '';
-  position: absolute;
-
-  top: 100%;
-  left: 50%;
-  transform: translateX(-50%);
-
-  border-width: calc(1rem + 2px);
-  border-style: solid;
-  border-color: var(--border-color) transparent transparent transparent;
-
-  transition: all ease 0.3s;
-}
-#envelope-helper-guide::after {
-  content: '';
-  position: absolute;
-
-  top: calc(100% - 1px);
-  left: 50%;
-  transform: translateX(-50%);
-
-  border-width: 1rem;
-  border-style: solid;
-  border-color: var(--page-color) transparent transparent transparent;
-
-  transition: all ease 0.3s;
 }
 #envelope-helper-guide.hide {
   opacity: 0;
@@ -1038,6 +1044,11 @@ header.home-header {
   text-align: center;
 }
 
+/* Clipboard */
+.clipboard-copy {
+  position: relative;
+  isolation: isolate;
+}
 .clipboard-copy div {
   display: inline-block;
 
@@ -1064,6 +1075,77 @@ header.home-header {
 }
 .clipboard-copy:visited div {
   color: var(--link-visited-color);
+}
+
+/* Clipboard Guide */
+#clipboard-copy-guide {
+  position: absolute;
+  display: inline-block;
+
+  z-index: 1;
+  top: -100%;
+  left: 50%;
+
+  width: max-content;
+
+  padding-top: 0.4rem;
+  padding-bottom: 0.4rem;
+  padding-left: 0.5rem;
+  padding-right: 0.5rem;
+
+  margin-left: 0.5rem;
+  margin-right: 0.5rem;
+
+  transform-origin: center bottom;
+  animation: clipboard-guide-disappear 0.3s ease forwards;
+
+  .clicked {
+    display: none;
+  }
+  .unclicked {
+    display: inline-block;
+  }
+}
+.clipboard-copy:hover #clipboard-copy-guide {
+  animation: clipboard-guide-appear 0.3s ease forwards;
+}
+.clipboard-copy {
+  .displayClicked {
+    display: none;
+  }
+  .displayUnclicked {
+    display: block;
+  }
+}
+
+.clipboard-copy.clicked {
+  .displayClicked {
+    display: inline-block;
+  }
+  .displayUnclicked {
+    display: none;
+  }
+}
+
+@keyframes clipboard-guide-disappear {
+  from {
+    opacity: 1;
+    transform: translate(-50%, -100%) rotate(0deg);
+  }
+  to {
+    opacity: 0;
+    transform: translate(-50%, 0%) rotate(-45deg);
+  }
+}
+@keyframes clipboard-guide-appear {
+  from {
+    opacity: 0;
+    transform: translate(-50%, 0%) rotate(45deg);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, -100%) rotate(0deg);
+  }
 }
 
 /* Link Buttons*/
