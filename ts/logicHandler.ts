@@ -483,12 +483,24 @@ function pencilWoosh(): void {
 
 //#region Element Methods
 function initalizeElementClasses(): void {
-  Array.from(document.getElementsByClassName(CLIPBOARD_COPY)).forEach((el) =>
+  Array.from(document.getElementsByClassName(CLIPBOARD_COPY)).forEach((el) => {
+    if (!(el instanceof HTMLElement)) {
+      return;
+    }
+
+    el.addEventListener(
+      'pointerenter',
+      (_) => {
+        el.classList.add('played');
+      },
+      { once: true }
+    );
+
     el.addEventListener('click', () => {
       el.classList.add(CLIPBOARD_CLICKED);
       setClipboard(el.getAttribute('clipboard') ?? '');
-    })
-  );
+    });
+  });
 
   Array.from(document.getElementsByClassName(BUBBLE_CLASSNAME)).forEach(
     bubblePop

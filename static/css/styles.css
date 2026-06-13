@@ -1048,10 +1048,14 @@ header.home-header {
 .clipboard-copy {
   position: relative;
   isolation: isolate;
+
+  animation-direction: paused !important;
+}
+.clipboard-copy.played {
+  animation-play-state: running !important;
 }
 .clipboard-copy div {
   display: inline-block;
-
   color: var(--link-normal-color);
   text-shadow: transparent 0px 4px 4px;
 
@@ -1079,8 +1083,8 @@ header.home-header {
 
 /* Clipboard Guide */
 #clipboard-copy-guide {
+  display: none;
   position: absolute;
-  display: inline-block;
 
   z-index: 1;
   top: -100%;
@@ -1106,6 +1110,10 @@ header.home-header {
     display: inline-block;
   }
 }
+.clipboard-copy.played #clipboard-copy-guide {
+  display: inline-block;
+}
+
 .clipboard-copy:hover #clipboard-copy-guide {
   animation: clipboard-guide-appear 0.3s ease forwards;
 }
@@ -1125,6 +1133,10 @@ header.home-header {
   .displayUnclicked {
     display: none;
   }
+}
+
+.page-is-entering #clipboard-copy-guide {
+  animation: unset;
 }
 
 @keyframes clipboard-guide-disappear {
