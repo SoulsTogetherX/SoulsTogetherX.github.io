@@ -1,5 +1,9 @@
 //#region Type Def
+export type SoundPreference = 'unmute' | 'mute';
+
 export type SoundPresets =
+  | 'sound-toggle-on'
+  | 'woosh'
   | 'pop'
   | 'light-switch'
   | 'button-click'
@@ -13,6 +17,12 @@ export type SoundPresets =
   | 'open-window';
 //#endregion
 
+//#region Constant Keys
+const MUTE_CLASSNAME = 'mute-audio';
+
+const SOUND_KEY = 'sound';
+//#endregion
+
 //#region Audio Constants
 // CTX
 const audioContext = new (
@@ -20,6 +30,8 @@ const audioContext = new (
 )();
 
 // OTHER
+const SOUND_TOGGLE_ON = bufferSoundEffect('../assets/sfx/sound-toggle-on.ogg');
+const WOOSH_SFX = bufferSoundEffect('../assets/sfx/woosh.ogg');
 const POP_SFX = bufferSoundEffect('../assets/sfx/pop.ogg');
 const LIGHT_SWITCH_SFX = bufferSoundEffect('../assets/sfx/light-switch.ogg');
 
@@ -49,6 +61,10 @@ const MOBILE_OPEN_WINDOW_SFX = bufferSoundEffect(
 const MOBILE_CLOSE_WINDOW_SFX = bufferSoundEffect(
   '../assets/sfx/mobile-close-window.ogg'
 );
+//#endregion
+
+//#region Public Variables
+let isUnmuted: boolean = true;
 //#endregion
 
 //#region Listeners
@@ -105,7 +121,17 @@ async function playSoundEffectBuffer(
 }
 
 export function playPresetSFX(soundType: SoundPresets): void {
+  if (!isUnmuted) {
+    return;
+  }
+
   switch (soundType) {
+    case 'sound-toggle-on':
+      playSoundEffectRandomBuffer(SOUND_TOGGLE_ON, 0.8, 0.8, 1);
+      break;
+    case 'woosh':
+      playSoundEffectRandomBuffer(WOOSH_SFX, 0.9, 1.1, 0.5);
+      break;
     case 'pop':
       playSoundEffectRandomBuffer(POP_SFX, 0.8, 1.2, 0.45);
       break;
@@ -113,7 +139,7 @@ export function playPresetSFX(soundType: SoundPresets): void {
       playSoundEffectRandomBuffer(LIGHT_SWITCH_SFX, 0.9, 1.1, 0.85);
       break;
     case 'button-click':
-      playSoundEffectRandomBuffer(BUTTON_CLICK_SFX, 0.8, 1.2, 0.75);
+      playSoundEffectRandomBuffer(BUTTON_CLICK_SFX, 0.8, 1.2, 0.7);
       break;
     case 'button-hover':
       playSoundEffectRandomBuffer(BUTTON_HOVER_SFX, 0.9, 1.1, 0.85);
@@ -158,7 +184,17 @@ export async function playSoundEffect(
   targetPitch: number = 1.0,
   targetVolume: number = 1.0
 ): Promise<void> {
+  if (!isUnmuted) {
+    return;
+  }
+
   switch (soundType) {
+    case 'sound-toggle-on':
+      playSoundEffectBuffer(SOUND_TOGGLE_ON, targetPitch, targetVolume);
+      break;
+    case 'woosh':
+      playSoundEffectBuffer(WOOSH_SFX, targetPitch, targetVolume);
+      break;
     case 'pop':
       playSoundEffectBuffer(POP_SFX, targetPitch, targetVolume);
       break;
@@ -202,4 +238,47 @@ export async function playSoundEffect(
       break;
   }
 }
+//#endregion
+
+//#region Export Methods
+export function getSavedSound(): SoundPreference {
+  const savedTheme = localStorage.getItem(SOUND_KEY);
+  if (savedTheme === null) {
+    return 'unmute';
+  }
+  return savedTheme as SoundPreference;
+}
+
+export function setSoundMode(theme: SoundPreference): void {
+  toggleSoundMode(theme === 'unmute');
+}
+export function toggleSoundMode(toggle?: boolean): void {
+  if (toggle === undefined) {
+    const newTheme =
+      localStorage.getItem(SOUND_KEY) === 'unmute' ? 'mute' : 'unmute';
+
+    document.body.classList.toggle(MUTE_CLASSNAME);
+    localStorage.setItem(SOUND_KEY, newTheme);
+
+    isUnmuted = newTheme === 'unmute';
+    return;
+  }
+
+  isUnmuted = toggle;
+
+  if (toggle) {
+    document.body.classList.remove(MUTE_CLASSNAME);
+    localStorage.setItem(SOUND_KEY, 'unmute');
+    return;
+  }
+  document.body.classList.add(MUTE_CLASSNAME);
+  localStorage.setItem(SOUND_KEY, 'mute');
+}
+//#endregion
+
+//#region Initialization
+function initializeSoundMode(): void {
+  setSoundMode('unmute');
+}
+initializeSoundMode();
 //#endregion

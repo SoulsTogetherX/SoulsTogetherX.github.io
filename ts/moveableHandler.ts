@@ -59,6 +59,10 @@ const SLOWDOWN_FLAT = 0.1;
 const DRAG_THRESHOLD = 2;
 //#endregion
 
+//#region Query Constants
+const ENVELOPE_WRAPPER = document.getElementById('envelope-wrapper');
+//#endregion
+
 //#region Constants (Holders)
 const objects: MoveableObject[] = [];
 const registeredMethods: (() => void)[] = [];
@@ -154,7 +158,15 @@ export function makeDraggable(
     if (!obj.isLocked) {
       obj.soundPlayed = false;
     }
+
     root.style.zIndex = String(++zIndex);
+    if (
+      document.body.classList.contains('active') &&
+      ENVELOPE_WRAPPER &&
+      obj.root !== ENVELOPE_WRAPPER
+    ) {
+      ENVELOPE_WRAPPER.style.zIndex = String(++zIndex);
+    }
   }
   function playSound(_: PointerEvent): void {
     if (obj.isLocked || document.body.classList.contains('active')) {

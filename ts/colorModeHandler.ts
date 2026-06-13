@@ -3,7 +3,7 @@ export type ThemePreference = 'dark' | 'light';
 //#endregion
 
 //#region Constant Keys
-const DARk_MODE_CLASSNAME = 'dark-mode';
+const DARK_MODE_CLASSNAME = 'dark-mode';
 
 const THEME_KEY = 'theme';
 //#endregion
@@ -34,21 +34,21 @@ export function setThemeMode(theme: ThemePreference): void {
 export function toggleThemeMode(toggle?: boolean): void {
   if (toggle === undefined) {
     const newTheme =
-      localStorage.getItem('theme') === 'dark' ? 'light' : 'dark';
+      localStorage.getItem(THEME_KEY) === 'dark' ? 'light' : 'dark';
 
-    document.body.classList.toggle(DARk_MODE_CLASSNAME);
+    document.body.classList.toggle(DARK_MODE_CLASSNAME);
     document.documentElement.setAttribute('data-theme', newTheme);
     localStorage.setItem(THEME_KEY, newTheme);
     return;
   }
 
   if (toggle) {
-    document.body.classList.add(DARk_MODE_CLASSNAME);
+    document.body.classList.add(DARK_MODE_CLASSNAME);
     document.documentElement.setAttribute('data-theme', 'dark');
     localStorage.setItem(THEME_KEY, 'dark');
     return;
   }
-  document.body.classList.remove(DARk_MODE_CLASSNAME);
+  document.body.classList.remove(DARK_MODE_CLASSNAME);
   document.documentElement.setAttribute('data-theme', 'light');
   localStorage.setItem(THEME_KEY, 'light');
 }

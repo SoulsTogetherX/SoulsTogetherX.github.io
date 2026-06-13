@@ -12,6 +12,7 @@
   ></div>
 
   <div id="desktop-show">
+    {{ partial "./objs/soundToken" }}
     {{ partial "./objs/colorToken" }}
     {{ partial "./objs/pencil" }}
 
@@ -32,16 +33,19 @@
   </div>
 
   <div id="mobile-show">
+    {{ partial "./mobile/toggle-options" }}
+
+
     <div class="mobile-page-front-text">
       <h2>Xavier Alvarez</h2>
       <h4>Freelance Godot, Web, and Mobile developer.</h4>
     </div>
 
-    {{ partial "./mobile-nav/mobile-nav" }}
+    {{ partial "./mobile/mobile-nav" }}
 
 
     <div class="mobile-window">
-      {{ partial "./mobile-nav/page-nav" }}
+      {{ partial "./mobile/page-nav" }}
 
 
       <div id="mobile-page-holder">

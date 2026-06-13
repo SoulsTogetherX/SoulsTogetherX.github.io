@@ -1,4 +1,8 @@
-import { playPresetSFX, playSoundEffectRandom } from './audioHandler.js';
+import {
+  playPresetSFX,
+  playSoundEffectRandom,
+  toggleSoundMode,
+} from './audioHandler.js';
 import { toggleThemeMode } from './colorModeHandler.js';
 import {
   MOVEMENT_AXES,
@@ -29,22 +33,35 @@ const PAGE_EXITING_CLASS_NAME = 'page-is-exiting';
 const DISABLE_MOVE_WRAPPER_CLASS_NAME = 'disable-move-wrapper';
 
 const HIDE_GUIDE_CLASS_NAME = 'hide';
+
+const CLIPBOARD_COPY = 'clipboard-copy';
+const AUDIO_BUTTON_CLASSNAME: string = 'audio-button';
+//#endregion
+
+//#region Constant Values (Bubble)
+const BUBBLE_CLASSNAME: string = 'bubble-pop';
+const BUBBLE_TIMEOUT: number = 50;
+
+const BUBBLE_VOLUME: number = 0.3;
+
+const MAX_BUBBLE_PITCH: number = 1.3;
+const MIN_BUBBLE_PITCH: number = 0.5;
+const INC_BUBBLE_PITCH: number = 0.05;
+const RANGE_BUBBLE_PITCH: number = 0.05;
+//#endregion
+
+//#region Constant Values (Pencil Woosh)
+const MAX_PENCIL_VOLUME: number = 0.7;
+const MIN_PENCIL_VOLUME: number = 0.0;
+
+const MAX_PENCIL_DELAY: number = 500;
+const MIN_PENCIL_DELAY: number = 100;
 //#endregion
 
 //#region Constant Values (Helper)
 const FALLBACK_REDIRECTS = ['/', '/about'];
 
-const PENCIL_ROTATION = 50;
-
-const AUDIO_BUTTON_CLASSNAME: string = 'audio-button';
-
-const BUBBLE_CLASSNAME: string = 'bubble-pop';
-const BUBBLE_TIMEOUT: number = 50;
-
-const MIN_BUBBLE_PITCH: number = 0.5;
-const MAX_BUBBLE_PITCH: number = 1.3;
-const INC_BUBBLE_PITCH: number = 0.05;
-const RANGE_BUBBLE_PITCH: number = 0.05;
+const PENCIL_MAX_ROTATION_SPEED = 50;
 //#endregion
 
 //#region Constant Queries
@@ -63,6 +80,10 @@ const PENCIL_WRAPPER = document.getElementById('pencil-wrapper');
 const PENCIL = document.getElementById('pencil');
 
 const COLOR_TOKEN_WRAPPER = document.getElementById('color-token-wrapper');
+const SOUND_TOKEN_WRAPPER = document.getElementById('sound-token-wrapper');
+
+const MOBILE_COLOR_TOGGLE = document.getElementById('dark-mode-toggle');
+const MOBILE_SOUND_TOGGLE = document.getElementById('sound-mode-toggle');
 //#endregion
 
 //#region Public Variables
@@ -75,6 +96,10 @@ let pageId: number = 0;
 
 let bubbleEscalation: number = MIN_BUBBLE_PITCH;
 let bubbleTimerId: number | undefined = undefined;
+
+let wooshEscalation: number = MIN_PENCIL_VOLUME;
+let wooshDelay: number = MAX_PENCIL_DELAY;
+let wooshTimerId: number | undefined = undefined;
 //#endregion
 
 //#region Public Queries
@@ -150,6 +175,10 @@ if (ENVELOPE_GUIDE && ENVELOPE) {
     { once: true }
   );
 }
+
+// Toggles
+MOBILE_COLOR_TOGGLE?.addEventListener('click', toggleThemeWithSFX);
+MOBILE_SOUND_TOGGLE?.addEventListener('click', toggleSoundWithSFX);
 //#endregion
 
 //#region Document Methods
@@ -327,7 +356,7 @@ async function runNavigation(req: NavRequest): Promise<void> {
     }
 
     busy = false;
-    initalizeAusioClasses();
+    initalizeElementClasses();
   }
 }
 //#endregion
@@ -408,6 +437,8 @@ if (PENCIL) {
   PENCIL.addEventListener('pointerdown', () => {
     pencilRotationAcceleration = 0.1;
     pencilRotationSpeed = 1;
+
+    pencilWooshLoopStart();
   });
   document.addEventListener('pointerup', () => {
     pencilRotationAcceleration = -0.5;
@@ -420,16 +451,42 @@ registerToPhysicsUpdate((): void => {
   }
 
   pencilRotationSpeed = Math.max(
-    Math.min(pencilRotationSpeed + pencilRotationAcceleration, PENCIL_ROTATION),
+    Math.min(
+      pencilRotationSpeed + pencilRotationAcceleration,
+      PENCIL_MAX_ROTATION_SPEED
+    ),
     0
   );
   pencilRotation += pencilRotationSpeed;
   PENCIL.style.setProperty('--pencil-rotation', `${pencilRotation}deg`);
 });
+
+function pencilWooshLoopStart(): void {
+  wooshDelay = MAX_PENCIL_DELAY;
+  wooshEscalation = MIN_PENCIL_VOLUME;
+
+  clearTimeout(wooshTimerId);
+  wooshTimerId = setTimeout(pencilWoosh, wooshDelay);
+}
+function pencilWoosh(): void {
+  const ratio = pencilRotationSpeed / PENCIL_MAX_ROTATION_SPEED;
+
+  playSoundEffectRandom('woosh', 0.9, 1.1, ratio * MAX_PENCIL_VOLUME);
+  wooshTimerId = setTimeout(
+    pencilWoosh,
+    MAX_PENCIL_DELAY + (MIN_PENCIL_DELAY - MAX_PENCIL_DELAY) * ratio
+  );
+}
 //#endregion
 
-//#region Audio Methods
-function initalizeAusioClasses(): void {
+//#region Element Methods
+function initalizeElementClasses(): void {
+  Array.from(document.getElementsByClassName(CLIPBOARD_COPY)).forEach((el) =>
+    el.addEventListener('click', () =>
+      setClipboard(el.getAttribute('clipboard') ?? '')
+    )
+  );
+
   Array.from(document.getElementsByClassName(BUBBLE_CLASSNAME)).forEach(
     bubblePop
   );
@@ -437,7 +494,21 @@ function initalizeAusioClasses(): void {
     buttonSounds
   );
 }
+//#endregion
 
+//#region Clipboard Methods
+async function setClipboard(text: string): Promise<void> {
+  const type = 'text/plain';
+  const clipboardItemData = {
+    [type]: text,
+  };
+  const clipboardItem = new ClipboardItem(clipboardItemData);
+
+  await navigator.clipboard.write([clipboardItem]);
+}
+//#endregion
+
+//#region Audio Methods
 function playBubbleSFX(): void {
   if (bubbleTimerId) {
     return;
@@ -451,7 +522,7 @@ function playBubbleSFX(): void {
     'pop',
     bubbleEscalation - RANGE_BUBBLE_PITCH,
     bubbleEscalation + RANGE_BUBBLE_PITCH,
-    0.45
+    BUBBLE_VOLUME
   );
 
   bubbleEscalation += INC_BUBBLE_PITCH;
@@ -498,12 +569,15 @@ function settupPrevPageClick(page: HTMLElement, url: URL): void {
   });
 }
 
+function toggleThemeWithSFX(): void {
+  toggleThemeMode();
+  playPresetSFX('light-switch');
+}
+function toggleSoundWithSFX(): void {
+  toggleSoundMode();
+  playPresetSFX('sound-toggle-on');
+}
 function registerAllMovableElements(): void {
-  const toggleThemeWithSFX = () => {
-    playPresetSFX('light-switch');
-    toggleThemeMode();
-  };
-
   if (ENVELOPE_WRAPPER && ENVELOPE) {
     registerMovableElement(
       ENVELOPE_WRAPPER,
@@ -537,6 +611,18 @@ function registerAllMovableElements(): void {
       [0.5, 0.5],
       undefined,
       toggleThemeWithSFX,
+      true
+    );
+  }
+  if (SOUND_TOKEN_WRAPPER) {
+    registerMovableElement(
+      SOUND_TOKEN_WRAPPER,
+      SOUND_TOKEN_WRAPPER.firstElementChild as HTMLElement,
+      MOVEMENT_AXES.HORIZONTAL | MOVEMENT_AXES.VERTICAL,
+      [24, 50],
+      [0.5, 0.5],
+      undefined,
+      toggleSoundWithSFX,
       true
     );
   }
@@ -625,5 +711,5 @@ async function initializePages(): Promise<void> {
 //#region Initialization Methods (Called)
 registerAllMovableElements();
 initializePages();
-initalizeAusioClasses();
+initalizeElementClasses();
 //#endregion

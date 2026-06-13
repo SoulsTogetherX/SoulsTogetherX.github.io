@@ -17,7 +17,13 @@
     </a>
 
     <header class="home-header">
-      <h1 class="text-highlight">Thank you for receiving my letter!</h1>
+      <h1 class="text-highlight desktop-only">
+        Thank you for receiving my letter!
+      </h1>
+      <h1 class="text-highlight mobile-only">
+        Thank you for receiving my email!
+      </h1>
+
       <h6>Wasn't sure you'd get it...</h6>
     </header>
 
@@ -77,8 +83,15 @@
         </a>
       </div>
     </div>
-    <div class="bottom-page-margin border-left">
+    <div class="bottom-page-margin border-left desktop-only">
       You can use the bottom tabs to navigate between sections.
+    </div>
+    <div class="bottom-page-margin border-left mobile-only">
+      <p style="margin-bottom: 0.5rem;">
+        This website is best experienced in desktop. Some features might not be
+        available on other devices.
+      </p>
+      <p>Sorry!</p>
     </div>
   </section>
 {{ end }}
