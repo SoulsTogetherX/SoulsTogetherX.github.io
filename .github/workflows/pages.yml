@@ -6,7 +6,8 @@ env:
 on:
   push:
     branches:
-      - SoulsTogetherX-patch-1
+      - main
+      - dev
   workflow_dispatch:
 
 permissions:
