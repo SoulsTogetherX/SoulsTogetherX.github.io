@@ -3,7 +3,7 @@ name: Deploy site to GitHub Pages
 on:
   push:
     branches:
-      - main
+      - SoulsTogetherX-patch-1
   workflow_dispatch:
 
 permissions:
