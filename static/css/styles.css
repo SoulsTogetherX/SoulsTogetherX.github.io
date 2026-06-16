@@ -215,10 +215,10 @@ body {
 
 /*#region Background*/
 #bg {
+  z-index: -1;
+
   position: fixed;
   inset: 0;
-
-  z-index: -1;
 }
 /*#endregion*/
 
@@ -293,7 +293,9 @@ body {
 
   pointer-events: none;
 
-  transition: all ease 0.3s;
+  transition:
+    background-color ease 0.3s,
+    border-color ease 0.3s;
 }
 .floating-bubble::before {
   content: '';
@@ -307,7 +309,8 @@ body {
   border-style: solid;
   border-color: var(--border-color) transparent transparent transparent;
 
-  transition: all ease 0.3s;
+  transition:
+    border-color ease 0.3s;
 }
 .floating-bubble::after {
   content: '';
@@ -321,7 +324,168 @@ body {
   border-style: solid;
   border-color: var(--page-color) transparent transparent transparent;
 
-  transition: all ease 0.3s;
+  transition:
+    border-color ease 0.3s;
+}
+/*#endregion*/
+
+/*#region Sticky Note */
+.sticky-note {
+  z-index: -2;
+  isolation: isolate;
+  display: inline-block;
+
+  position: fixed;
+  top: 5vh;
+  right: 10vw;
+
+  height: min-content;
+  min-height: 12vw;
+
+  padding: 1rem;
+
+  border-top-left-radius: 2%;
+  border-top-right-radius: 2%;
+
+  border: var(--border-color) solid 0.2rem;
+  border-bottom-width: 0;
+
+  background-color: var(--page-color);
+  filter: drop-shadow(0px 5px 5px rgba(from var(--shadow-color) r g b / 0.3));
+
+  transition:
+    color 0.3s ease,
+    background-color 0.3s ease,
+    border-color 0.3s ease;
+}
+.sticky-note:after {
+  content: "";
+
+  display: inline-block;
+
+  position: absolute;
+  bottom: -2rem;
+  left: -0.2rem;
+  right: 2rem;
+
+  height: 2rem;
+
+  border: var(--border-color) solid 0.2rem;
+  border-top-width: 0;
+  border-right-width: 0;
+
+  background-color: var(--page-color);
+
+  transition:
+    background-color 0.3s ease,
+    border-color 0.3s ease;
+}
+.sticky-note:before {
+  content: "";
+  display: block;
+
+  position: absolute;
+  bottom: -2rem;
+  right: -0.2rem;
+
+  border-top: 1rem solid var(--primary-text-color);
+  border-left: 1.2rem solid var(--primary-text-color);
+  border-bottom: 1rem solid transparent;
+  border-right: 1rem solid transparent;
+
+  background-color: transparent;
+
+  transition:
+    background-color 0.3s ease,
+    border-color 0.3s ease;
+}
+
+.stick-note-tape {
+  position: absolute;
+  top: 0;
+  left: 50%;
+
+  width: 20%;
+  aspect-ratio: 1.5;
+
+  background-color: rgba(from var(--primary-text-color) r g b / 0.3);
+
+  transform: translate(-50%, -60%) rotate(-60deg);
+
+  transition: background-color 0.3s ease;
+}
+/*#endregion*/
+
+/*#region Toggle Button Top */
+.toggle-options-head {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+
+  display: flex;
+  flex-direction: row;
+
+  touch-action: none;
+}
+
+.toggle-option {
+  width: 3rem;
+  aspect-ratio: 1;
+
+  pointer-events: all;
+
+  touch-action: auto;
+}
+.toggle-option:last-child {
+  margin-left: auto;
+  margin-right: 0.5rem;
+}
+
+.toggle-option .off {
+  display: inline-block;
+}
+.toggle-option .on {
+  display: none;
+}
+.toggle-option:active {
+  transform: scale(0.7);
+}
+
+/* Dark Mode */
+body.dark-mode {
+  #dark-mode-toggle.toggle-option {
+    .off {
+      display: none;
+    }
+    .on {
+      display: inline-block;
+    }
+  }
+}
+
+/* Sound */
+body.mute-audio {
+  #sound-mode-toggle.toggle-option {
+    .off {
+      display: none;
+    }
+    .on {
+      display: inline-block;
+    }
+  }
+}
+
+/* Sound */
+body.complex {
+  #style-mode-toggle.toggle-option {
+    .off {
+      display: none;
+    }
+    .on {
+      display: inline-block;
+    }
+  }
 }
 /*#endregion*/
 
@@ -657,7 +821,7 @@ body.active #envelope .page {
   }
 }
 
-#mobile-show .mobile-window {
+.mobile-window {
   position: absolute;
   top: 5vh;
   left: 2%;
@@ -675,6 +839,18 @@ body.active #envelope .page {
 
   pointer-events: all;
 }
+@media screen and (min-width: 640px) {
+  .mobile-window {
+    position: absolute;
+    left: 50%;
+    right: unset;
+
+    width: max(40vw, 500px);
+
+    translate: -50% 0%;
+  }
+}
+
 body.active .mobile-window {
   transition-delay: 0.1s;
   scale: 1 !important;
@@ -891,13 +1067,11 @@ body.active #envelope-nav a:nth-child(5) li {
 }
 
 /* OctoCat code here: https://github.com/tholman/github-corners/issues/15 */
-#desktop-show {
-  .github-corner {
-    display: none;
-  }
-  body.active .github-corner {
-    display: unset;
-  }
+#desktop-show .github-corner {
+  display: none;
+}
+body.active #desktop-show .github-corner {
+  display: unset;
 }
 
 .github-corner svg {
@@ -1281,71 +1455,18 @@ header.home-header {
     transform: translateY(0.5rem) rotate(-8deg);
   }
 }
-
-/* Mobile Toggle Button Styles */
-.mobile-toggle-options {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-
-  display: flex;
-  flex-direction: row;
-}
-
-.toggle-option {
-  width: 3rem;
-  aspect-ratio: 1;
-
-  pointer-events: all;
-}
-.toggle-option .off {
-  display: inline-block;
-}
-.toggle-option .on {
-  display: none;
-}
-.toggle-option:active {
-  transform: scale(0.7);
-}
-
-/* Dark Mode */
-body.dark-mode {
-  #dark-mode-toggle.toggle-option {
-    .off {
-      display: none;
-    }
-    .on {
-      display: inline-block;
-    }
-  }
-}
-
-/* Sound */
-body.mute-audio {
-  #sound-mode-toggle.toggle-option {
-    .off {
-      display: none;
-    }
-    .on {
-      display: inline-block;
-    }
-  }
-}
 /*#endregion*/
 /*#endregion*/
 
 /*#region Breakpoints */
 #desktop-show {
-  display: none;
+  display: contents;
   position: relative;
 
   width: 100%;
   height: 100%;
 
-  .mobile-only {
-    display: none;
-  }
+  touch-action: none;
 }
 #mobile-show {
   display: grid;
@@ -1356,16 +1477,37 @@ body.mute-audio {
   width: 100%;
   height: 100%;
 
-  .desktop-only {
-    display: none;
-  }
+  touch-action: none;
+}
+
+.desktop-size-only, .desktop-size {
+  opacity: 0 !important;
+  display: none !important;
+  
+  transition:
+    display step-end 0.3s,
+    opacity linear 0.3,
+    all ease 0.3s;
+  transition-behavior: allow-discrete;
+}
+.mobile-size-only, .mobile-size {
+  opacity: 1 !important;
+  display: unset !important;
+
+  transition:
+    display step-end 0.3s,
+    opacity linear 0.3,
+    all ease 0.3s;
+  transition-behavior: allow-discrete;
 }
 @media screen and (min-width: 640px) {
-  #desktop-show {
-    display: contents;
+  .complex .mobile-size-only, .mobile-size {
+    opacity: 0 !important;
+    display: none !important;
   }
-  #mobile-show {
-    display: none;
+  .complex .desktop-size-only, .desktop-size {
+    opacity: 1 !important;
+    display: unset !important;
   }
 }
 /*#endregion*/
