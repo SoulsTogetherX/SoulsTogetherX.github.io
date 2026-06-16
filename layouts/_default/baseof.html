@@ -4,67 +4,73 @@
 </head>
 
 <body>
-  <div
-    id="bg"
-    class="sound-element"
-    sound-type="click"
-    aria-hidden="true"
-  ></div>
+  <div class="normal-size">
+    <div
+      id="bg"
+      class="sound-element"
+      sound-type="click"
+      aria-hidden="true"
+    ></div>
 
-  {{ partial "toggle-options" }}
+    {{ partial "toggle-options" }}
 
-  <div class="desktop-size-only">
-    <div id="desktop-show" >
-      {{ partial "stickyNote" }}
+    <div class="desktop-size-only">
+      <div id="desktop-show" >
+        {{ partial "stickyNote" }}
 
-      {{ partial "objs/soundToken" }}
-      {{ partial "objs/colorToken" }}
-      {{ partial "objs/pencil" }}
+        {{ partial "objs/soundToken" }}
+        {{ partial "objs/colorToken" }}
+        {{ partial "objs/pencil" }}
 
 
-      <div id="envelope-wrapper" class="movable-wrapper">
-        <span
-          id="envelope-helper-guide"
-          class="floating-bubble"
-          aria-hidden="true"
-          >Click or Drag me</span
-        >
-        <div id="envelope" class="movable-origin-offset grab-hover">
-          <div id="desktop-page-holder" class="page-wrapper">
-            <main class="page movable-wrapper">
+        <div id="envelope-wrapper" class="movable-wrapper">
+          <span
+            id="envelope-helper-guide"
+            class="floating-bubble"
+            aria-hidden="true"
+            >Click or Drag me</span
+          >
+          <div id="envelope" class="movable-origin-offset grab-hover">
+            <div id="desktop-page-holder" class="page-wrapper">
+              <main class="page movable-wrapper">
+                {{ block "main" . }}
+                {{ end }}
+              </main>
+            </div>
+            {{ partial "envelope/envelopeSvgs" }}
+            {{ partial "envelope/envelopeNav" }}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="mobile-size-only">
+      <div id="mobile-show">
+        <div class="mobile-page-front-text">
+          <h2>Xavier Alvarez</h2>
+          <h4>Freelance Godot, Web, and Mobile developer.</h4>
+        </div>
+
+        {{ partial "mobile/mobile-nav" }}
+
+
+        <div class="mobile-window">
+          {{ partial "mobile/page-nav" }}
+
+
+          <div id="mobile-page-holder">
+            <main class="mobile-page-scroll scroll-gradient disable-highlight">
               {{ block "main" . }}
               {{ end }}
             </main>
           </div>
-          {{ partial "envelope/envelopeSvgs" }}
-          {{ partial "envelope/envelopeNav" }}
         </div>
       </div>
     </div>
   </div>
 
-  <div class="mobile-size-only">
-    <div id="mobile-show">
-      <div class="mobile-page-front-text">
-        <h2>Xavier Alvarez</h2>
-        <h4>Freelance Godot, Web, and Mobile developer.</h4>
-      </div>
-
-      {{ partial "mobile/mobile-nav" }}
-
-
-      <div class="mobile-window">
-        {{ partial "mobile/page-nav" }}
-
-
-        <div id="mobile-page-holder">
-          <main class="mobile-page-scroll scroll-gradient disable-highlight">
-            {{ block "main" . }}
-            {{ end }}
-          </main>
-        </div>
-      </div>
-    </div>
+  <div class="small-size">
+    It appears the height is too small. If on mobile, please rotate your device.
   </div>
 
   <footer>©2026 Xavier Alvarez</footer>
