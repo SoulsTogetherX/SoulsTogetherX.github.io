@@ -13,6 +13,7 @@ import {
   makedUntouched,
   registerToPhysicsUpdate,
 } from './moveableHandler.js';
+import { toggleStyleMode } from './styleModeHandler.js';
 
 //#region Type Defs
 type NavKind = 'push' | 'pop';
@@ -86,6 +87,7 @@ const SOUND_TOKEN_WRAPPER = document.getElementById('sound-token-wrapper');
 
 const MOBILE_COLOR_TOGGLE = document.getElementById('dark-mode-toggle');
 const MOBILE_SOUND_TOGGLE = document.getElementById('sound-mode-toggle');
+const DESKTOP_STYLE_TOGGLE = document.getElementById('style-mode-toggle')
 //#endregion
 
 //#region Public Variables
@@ -181,6 +183,7 @@ if (ENVELOPE_GUIDE && ENVELOPE) {
 // Toggles
 MOBILE_COLOR_TOGGLE?.addEventListener('click', toggleThemeWithSFX);
 MOBILE_SOUND_TOGGLE?.addEventListener('click', toggleSoundWithSFX);
+DESKTOP_STYLE_TOGGLE?.addEventListener('click', toggleStyleWithSFX);
 //#endregion
 
 //#region Document Methods
@@ -592,6 +595,11 @@ function toggleSoundWithSFX(): void {
   toggleSoundMode();
   playPresetSFX('sound-toggle-on');
 }
+function toggleStyleWithSFX(): void {
+  toggleStyleMode();
+  playPresetSFX('light-switch');
+}
+
 function registerAllMovableElements(): void {
   if (ENVELOPE_WRAPPER && ENVELOPE) {
     registerMovableElement(
